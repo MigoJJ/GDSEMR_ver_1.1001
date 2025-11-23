@@ -1,0 +1,30 @@
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+// Gradle 9.2 Kotlin DSL template for build-logic (convention plugins)
+// Keeps plugin versions aligned via version catalogs to avoid drift with app module.
+plugins {
+    `kotlin-dsl`
+}
+
+val javaVersion = providers
+    .gradleProperty("javaVersion")
+    .map(String::toInt)
+    .orElse(25)
+    .get()
+
+gradlePlugin {
+    plugins {
+        register("javaConventions") {
+            id = "gds.java-conventions"
+            implementationClass = "conventions.JavaConventionsPlugin"
+        }
+    }
+}
+
+dependencies {
+    compileOnly(gradleApi())
+}
+
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
+}

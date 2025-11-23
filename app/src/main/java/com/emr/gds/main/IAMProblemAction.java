@@ -4,6 +4,7 @@ import com.emr.gds.IttiaApp;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.StringJoiner;
@@ -34,7 +36,9 @@ public class IAMProblemAction {
     // ================================ 
     private static final double SIDEBAR_WIDTH_PX = 460;
     private static final int SCRATCHPAD_ROWS = 35;
-    private static final double PROBLIST_HEIGHT_PX = 180;
+    private static final double PANEL_HEIGHT_PX = 600;
+    private static final double SCRATCHPAD_RATIO = 0.6; // Scratchpad : Problem List = 6 : 4
+    private static final double PROBLIST_HEIGHT_PX = PANEL_HEIGHT_PX * (1 - SCRATCHPAD_RATIO);
     private static final double SPACING_PX = 8;
     private static final double PADDING_RIGHT_PX = 8;
 
@@ -44,7 +48,9 @@ public class IAMProblemAction {
     private final IttiaApp app;
     private Connection dbConn;
     private final ObservableList<String> problems = FXCollections.observableArrayList();
+    private final Comparator<String> problemComparator = String::compareToIgnoreCase;
     private ListView<String> problemList;
+    private Button saveToEmrButton;
     private TextArea scratchpadArea;
     private final LinkedHashMap<String, String> scratchpadEntries = new LinkedHashMap<>();
 
@@ -106,7 +112,7 @@ public class IAMProblemAction {
         if (dbConn == null) return;
 
         problems.clear();
-        String sql = "SELECT problem_text FROM problems ORDER BY id";
+        String sql = "SELECT problem_text FROM problems ORDER BY problem_text COLLATE NOCASE";
 
         try (Statement stmt = dbConn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -166,9 +172,12 @@ public class IAMProblemAction {
         // --- Problem List Section ---
         problemList = createProblemListView();
         TextField input = createProblemInputTextField();
+        saveToEmrButton = createSaveToEmrButton();
         Button removeButton = createRemoveProblemButton();
-        HBox problemControls = new HBox(SPACING_PX, input, removeButton);
+        HBox problemControls = new HBox(SPACING_PX, input, saveToEmrButton, removeButton);
         HBox.setHgrow(input, Priority.ALWAYS);
+        problemList.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> updateSaveButtonState(newV));
+        updateSaveButtonState(problemList.getSelectionModel().getSelectedItem());
 
         // --- Scratchpad Section ---
         scratchpadArea = createScratchpadTextArea();
@@ -185,8 +194,8 @@ public class IAMProblemAction {
         );
 
         // Configure layout properties
-        VBox.setVgrow(problemList, Priority.NEVER);
-        VBox.setVgrow(scratchpadArea, Priority.NEVER);
+        VBox.setVgrow(problemList, Priority.ALWAYS);
+        VBox.setVgrow(scratchpadArea, Priority.ALWAYS);
         box.setPadding(new Insets(0, PADDING_RIGHT_PX, 0, 0));
         box.setPrefWidth(SIDEBAR_WIDTH_PX);
         box.setMaxWidth(SIDEBAR_WIDTH_PX);
@@ -196,8 +205,10 @@ public class IAMProblemAction {
     }
 
     private ListView<String> createProblemListView() {
-        ListView<String> listView = new ListView<>(problems);
+        SortedList<String> sortedProblems = new SortedList<>(problems, problemComparator);
+        ListView<String> listView = new ListView<>(sortedProblems);
         listView.setPrefHeight(PROBLIST_HEIGHT_PX);
+        listView.setMinHeight(PROBLIST_HEIGHT_PX * 0.8);
         listView.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
                 String selectedItem = listView.getSelectionModel().getSelectedItem();
@@ -207,6 +218,24 @@ public class IAMProblemAction {
             }
         });
         return listView;
+    }
+
+    private Button createSaveToEmrButton() {
+        Button b = new Button("Save to EMR");
+        b.setOnAction(e -> {
+            String selectedItem = problemList.getSelectionModel().getSelectedItem();
+            if (selectedItem != null) {
+                app.insertLineIntoFocusedArea("- " + selectedItem);
+            }
+        });
+        b.setDisable(true);
+        return b;
+    }
+
+    private void updateSaveButtonState(String selectedItem) {
+        if (saveToEmrButton != null) {
+            saveToEmrButton.setDisable(selectedItem == null);
+        }
     }
 
     private TextField createProblemInputTextField() {
@@ -239,6 +268,8 @@ public class IAMProblemAction {
         textArea.setWrapText(true);
         textArea.setEditable(true);
         textArea.setPrefRowCount(SCRATCHPAD_ROWS);
+        textArea.setPrefHeight(PANEL_HEIGHT_PX * SCRATCHPAD_RATIO);
+        textArea.setMinHeight(PANEL_HEIGHT_PX * SCRATCHPAD_RATIO * 0.8);
         return textArea;
     }
 

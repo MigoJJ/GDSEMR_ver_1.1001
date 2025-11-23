@@ -2,12 +2,6 @@ plugins {
     id 'java-library'
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
 dependencies {
     // list 모듈에서 외부 라이브러리 쓰면 여기에 추가
 }

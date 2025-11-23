@@ -5,3 +5,4 @@
 !src/main/resources/database/prolist.db
 .gradle/
 build/
+.aider*

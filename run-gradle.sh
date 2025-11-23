@@ -2,8 +2,8 @@
 
 # =============================================================================
 # run-gradle.sh - Run Gradle project on Ubuntu
-# Project: GDSEMR_ver_0.2
-# Location: ~/git/GDSEMR_ver_0.2
+# Project: GDSEMR_ver_0.3 (Java 25 + JavaFX 25)
+# Location: ~/git/GDSEMR_ver_0.3
 # =============================================================================
 
 set -euo pipefail  # Exit on error, unset vars, pipe failures
@@ -13,6 +13,7 @@ PROJECT_DIR="$HOME/git/GDSEMR_ver_0.3"
 GRADLE_WRAPPER="./gradlew"
 LOG_FILE="$PROJECT_DIR/run.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+# export ORG_GRADLE_JAVA_HOME=/path/to/jdk-25 # uncomment to force a specific JDK 25
 
 # --- Colors for output ---
 RED='\033[0;31m'

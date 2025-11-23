@@ -1,0 +1,33 @@
+// Gradle 9.2 Kotlin DSL root build template
+// - Centralizes Java toolchain setup
+// - Keeps plugin versions aligned with build-logic via version catalog
+
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
+plugins {
+    base
+}
+
+val javaVersion = providers
+    .gradleProperty("javaVersion")
+    .map(String::toInt)
+    .orElse(25)
+    .get()
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    plugins.withType<JavaPlugin> {
+        the<JavaPluginExtension>().toolchain.languageVersion.set(JavaLanguageVersion.of(javaVersion))
+    }
+}
+
+tasks.register("run") {
+    dependsOn(":app:run")
+}

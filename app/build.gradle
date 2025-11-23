@@ -3,24 +3,22 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
+def javafxVersion = providers.gradleProperty("javafxVersion").orElse("25.0.1").get()
+def sqliteVersion = providers.gradleProperty("sqliteVersion").orElse("3.45.3.0").get()
+def slf4jVersion = providers.gradleProperty("slf4jVersion").orElse("2.0.16").get()
 
 dependencies {
     implementation project(':list')
     implementation project(':utilities')
 
     // TODO: 필요하면 여기 추가 (예: JDBC 등)
-    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
-    runtimeOnly 'org.slf4j:slf4j-simple:1.7.32'
+    implementation "org.xerial:sqlite-jdbc:${sqliteVersion}"
+    runtimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
 javafx {
     // 이미 설치해 둔 JavaFX 25 SDK 버전에 맞춰서
-    version = '25.0.1'
+    version = javafxVersion
     modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.swing' ]
 }
 

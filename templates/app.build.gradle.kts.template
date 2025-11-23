@@ -1,0 +1,30 @@
+// Gradle 9.2 Kotlin DSL template for the app module (JavaFX 25)
+plugins {
+    application
+    alias(libs.plugins.javafx)
+}
+
+val javafxVersion = libs.versions.javafx.get()
+val sqliteVersion = libs.versions.sqlite.get()
+val slf4jVersion = libs.versions.slf4j.get()
+
+dependencies {
+    implementation(project(":list"))
+    implementation(project(":utilities"))
+
+    implementation("org.xerial:sqlite-jdbc:$sqliteVersion")
+    runtimeOnly("org.slf4j:slf4j-simple:$slf4jVersion")
+}
+
+javafx {
+    version = javafxVersion
+    modules = listOf("javafx.controls", "javafx.fxml", "javafx.swing")
+}
+
+application {
+    mainClass.set("com.emr.gds.IttiaApp") // update if the entry point changes
+    applicationDefaultJvmArgs = listOf(
+        "--enable-native-access=javafx.graphics",
+        "--enable-native-access=ALL-UNNAMED"
+    )
+}

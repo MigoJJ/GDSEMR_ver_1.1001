@@ -11,17 +11,12 @@ import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextFormatter;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Font;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -138,7 +133,7 @@ public class IAMTextArea {
             // Add listeners for focus, hover, and input events
             addFocusAndHoverListeners(ta);
             addScratchpadListener(ta, idx);
-            addAbbreviationExpansionListener(ta);
+            TextAreaControlProcessor.applyStandardProcessing(ta, abbrevMap);
             addDoubleClickListener(ta, idx);
 
             areas.add(ta);
@@ -204,14 +199,6 @@ public class IAMTextArea {
             ta.textProperty().addListener((o, oldV, newV) -> 
                     problemAction.updateAndRedrawScratchpad(TEXT_AREA_TITLES[idx], newV));
         }
-    }
-
-    private void addAbbreviationExpansionListener(TextArea ta) {
-        ta.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.SPACE) {
-                if (expandAbbreviationOnSpace(ta)) event.consume();
-            }
-        });
     }
 
     private void addDoubleClickListener(TextArea ta, int idx) {
@@ -340,7 +327,7 @@ public class IAMTextArea {
 
     public void insertBlockIntoFocusedArea(String block) {
         Optional.ofNullable(getFocusedArea()).ifPresent(ta -> {
-            String expandedBlock = expandAbbreviations(block);
+            String expandedBlock = TextAreaControlProcessor.expandAbbreviations(block, abbrevMap);
             ta.insertText(ta.getCaretPosition(), expandedBlock);
             Platform.runLater(ta::requestFocus);
         });
@@ -361,7 +348,7 @@ public class IAMTextArea {
     public void parseAndAppendTemplate(String templateContent) {
         if (templateContent == null || templateContent.isBlank()) return;
 
-        String expandedContent = expandAbbreviations(templateContent);
+        String expandedContent = TextAreaControlProcessor.expandAbbreviations(templateContent, abbrevMap);
 
         Map<String, TextArea> areaMap = new HashMap<>();
         for (int i = 0; i < TEXT_AREA_TITLES.length && i < areas.size(); i++) {
@@ -399,50 +386,6 @@ public class IAMTextArea {
         if (sectionsLoaded == 0) {
             insertBlockIntoFocusedArea(expandedContent);
         }
-    }
-
-    // ================================ 
-    // Abbreviation Expansion
-    // ================================ 
-
-    private boolean expandAbbreviationOnSpace(TextArea ta) {
-        int caret = ta.getCaretPosition();
-        String upToCaret = ta.getText(0, caret);
-        int start = Math.max(upToCaret.lastIndexOf(' '), upToCaret.lastIndexOf('\n')) + 1;
-
-        String word = upToCaret.substring(start).trim();
-        if (!word.startsWith(":")) return false;
-
-        String key = word.substring(1);
-        String replacement = getAbbreviationReplacement(key);
-        if (replacement == null) return false;
-
-        Platform.runLater(() -> {
-            ta.deleteText(start, caret);
-            ta.insertText(start, replacement + " ");
-        });
-        return true;
-    }
-
-    private String expandAbbreviations(String text) {
-        StringBuilder out = new StringBuilder();
-        Pattern abbrevPattern = Pattern.compile(":([\\S]+)");
-        Matcher matcher = abbrevPattern.matcher(text);
-
-        while (matcher.find()) {
-            String key = matcher.group(1);
-            String replacement = getAbbreviationReplacement(key);
-            matcher.appendReplacement(out, replacement != null ? Matcher.quoteReplacement(replacement) : matcher.group(0));
-        }
-        matcher.appendTail(out);
-        return out.toString();
-    }
-
-    private String getAbbreviationReplacement(String key) {
-        if ("cd".equalsIgnoreCase(key)) {
-            return LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-        }
-        return abbrevMap.get(key);
     }
 
     // ================================ 

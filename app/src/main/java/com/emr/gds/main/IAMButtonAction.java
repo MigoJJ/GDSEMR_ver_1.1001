@@ -1,8 +1,8 @@
 package com.emr.gds.main;
 
 import com.emr.gds.IttiaApp;
-import com.emr.gds.diagnosis.medication.MedsMain;
-import com.emr.gds.diagnosis.thyroid.Thyroid;
+import com.emr.gds.main.MedicationHelperApp;
+import com.emr.gds.main.ThyroidDisordersApp;
 import com.emr.gds.input.IAITextAreaManager;
 
 import javafx.application.Application;
@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 // Import for KCDDatabaseManagerJavaFX
-import com.emr.gds.fourgate.KCDdatabase.KCDDatabaseManagerJavaFX;
+import com.emr.gds.main.KCDDatabaseManagerJavaFX;
 
 /**
  * Manages the creation and actions for the top and bottom toolbars of the application.
@@ -148,7 +148,7 @@ public class IAMButtonAction {
         tb.getItems().add(createVaccineButton("Vaccine"));
         tb.getItems().add(createKCD9Button("KCD-9")); // KCD-9 button creation
         tb.getItems().add(createThyroidButton("Thyroid"));
-        tb.getItems().add(createMedsMainButton("MedsMain"));
+        tb.getItems().add(createMedicationHelperButton("Medication Helper"));
         tb.setPadding(new Insets(9, 0, 0, 0));
         return tb;
     }
@@ -182,7 +182,7 @@ public class IAMButtonAction {
         Button b = new Button(title);
         b.setOnAction(e -> {
             try {
-            	com.emr.gds.fourgate.vaccine.VaccineAction.open();
+            com.emr.gds.main.VaccineAction.open();
             } catch (Exception ex) {
                 System.err.println("Failed to launch Vaccine application: " + ex.getMessage());
             }
@@ -241,9 +241,8 @@ public class IAMButtonAction {
                     Stage thyroidStage = new Stage();
                     thyroidStage.setTitle("Thyroid Disorders GDS");
 
-                    // 2. Create an instance of Thyroid to get its UI content
-                    // The Thyroid class itself isn't the UI node; it's a factory for the UI.
-                    Thyroid thyroidApp = new Thyroid();
+                    // 2. Create an instance to get the UI content
+                    ThyroidDisordersApp thyroidApp = new ThyroidDisordersApp();
                     VBox thyroidRoot = thyroidApp.createThyroidUI(); // Get the VBox containing all categories
 
                     // 3. Wrap the UI content in a ScrollPane to handle potential overflow
@@ -275,17 +274,17 @@ public class IAMButtonAction {
         return b;
     }
 
-    private Button createMedsMainButton(String title) {
+    private Button createMedicationHelperButton(String title) {
         Button b = new Button(title);
         b.setOnAction(e -> {
             Platform.runLater(() -> {
                 try {
-                    MedsMain medsApp = new MedsMain();
+                    MedicationHelperApp medsApp = new MedicationHelperApp();
                     medsApp.init(); // We need to call this manually
                     Stage medsStage = new Stage();
                     medsApp.start(medsStage); // This will set up and show the window
                 } catch (Exception ex) {
-                    System.err.println("Failed to open MedsMain application: " + ex.getMessage());
+                    System.err.println("Failed to open Medication Helper application: " + ex.getMessage());
                     ex.printStackTrace();
                 }
             });

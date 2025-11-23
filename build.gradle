@@ -1,8 +1,24 @@
-// GDSEMR_ver_0.3 - simple multi-module build (no build-logic, no convention plugins)
+// GDSEMR_ver_0.3 - Gradle multi-module build
+//
+// Centralizes the Java 25 toolchain setup and keeps module build files lean.
+
+import org.gradle.api.plugins.JavaPlugin
+
+def javaVersion = (findProperty("javaVersion") ?: "25") as String
 
 allprojects {
     repositories {
         mavenCentral()
+    }
+}
+
+subprojects { subproject ->
+    plugins.withType(JavaPlugin).configureEach {
+        subproject.java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(javaVersion as int)
+            }
+        }
     }
 }
 

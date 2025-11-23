@@ -1,8 +1,8 @@
 package com.emr.gds;
 
-import com.emr.gds.fourgate.ChestPA;
-import com.emr.gds.fourgate.DEXA;
-import com.emr.gds.fourgate.EKG;
+import com.emr.gds.main.ChestXrayReviewStage;
+import com.emr.gds.main.DexaRiskAssessmentApp;
+import com.emr.gds.main.EkgSimpleReportApp;
 import com.emr.gds.input.IAIFreqFrame;
 import com.emr.gds.input.IAIFxTextAreaManager;
 import com.emr.gds.input.IAIMain;
@@ -12,6 +12,7 @@ import com.emr.gds.main.IAMFunctionkey;
 import com.emr.gds.main.IAMProblemAction;
 import com.emr.gds.main.IAMTextArea;
 import com.emr.gds.main.IAMTextFormatUtil;
+import com.emr.gds.main.TextAreaControlProcessor;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -235,17 +236,16 @@ public class IttiaApp extends Application {
         
         Button dexaButton = new Button("DEXA");
         dexaButton.setOnAction(e -> {
-            DEXA dexaApp = new DEXA();
-            Stage dexaStage = new Stage();
-            dexaApp.start(dexaStage);
+            DexaRiskAssessmentApp dexaApp = new DexaRiskAssessmentApp();
+            dexaApp.show();
         });
         
         Button ekgButton = new Button("EKG");
-        ekgButton.setOnAction(e -> SwingUtilities.invokeLater(() -> new EKG().setVisible(true)));
+        ekgButton.setOnAction(e -> EkgSimpleReportApp.open());
         
-        Button cpaButton = new Button("ChestPA");
+        Button cpaButton = new Button("Chest X-ray");
         cpaButton.setOnAction(event -> {
-            ChestPA chestPAWindow = new ChestPA(mainStage);
+            ChestXrayReviewStage chestPAWindow = new ChestXrayReviewStage(mainStage);
             chestPAWindow.show();
         });
         
@@ -340,6 +340,8 @@ public class IttiaApp extends Application {
      * Configures the application after the main stage is shown.
      */
     private void configurePostShow(Scene scene) {
+        TextAreaControlProcessor.installGlobalProcessor(abbrevMap);
+
         Platform.runLater(() -> {
             // Ensure the bridge is ready and set initial focus
             if (!isBridgeReady()) {

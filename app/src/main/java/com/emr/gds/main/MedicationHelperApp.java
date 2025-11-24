@@ -33,6 +33,9 @@ public class MedicationHelperApp extends Application {
     private final EmrBridgeService emrBridge = new EmrBridgeService();
 
     private Button btnEdit, btnDelete, btnSave;
+    private Label selectionLabel;
+    private ListView<MedicationItem> activeListView;
+    private MedicationItem activeItem;
 
         /* ------------------------------------------------------------------ */
     
@@ -46,6 +49,8 @@ public class MedicationHelperApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        initActionButtons();
+
         BorderPane root = new BorderPane();
         root.setLeft(createWestPanel());
         root.setCenter(createCenterPane());
@@ -92,34 +97,40 @@ public class MedicationHelperApp extends Application {
     }
 
     /* -------------------------- CENTER ----------------------------- */
-    public VBox createCenterPane() {
-        VBox center = new VBox();
-        center.getChildren().addAll(createToolbar(), createTabPane());
-        VBox.setVgrow(center.getChildren().get(1), Priority.ALWAYS);
+    public BorderPane createCenterPane() {
+        BorderPane center = new BorderPane();
+        center.setTop(createToolbar());
+        center.setCenter(createTabPane());
+        center.setRight(createActionFrame());
+        BorderPane.setMargin(center.getRight(), new Insets(10, 10, 10, 0));
         return center;
     }
 
-    private ToolBar createToolbar() {
-        Button btnFind = new Button("Find");
-        btnEdit   = new Button("Edit");
-        Button btnAdd   = new Button("Add");
+    private void initActionButtons() {
+        btnEdit = new Button("Edit");
         btnDelete = new Button("Delete");
-        btnSave   = new Button("Save");
-        Button btnQuit  = new Button("Quit");
+        btnSave = new Button("Save");
 
         btnEdit.setDisable(true);
         btnDelete.setDisable(true);
         btnSave.setDisable(true);
 
-        btnFind.setOnAction(e -> doFind());
         btnEdit.setOnAction(e -> doEdit());
-        btnAdd.setOnAction(e -> doAdd());
         btnDelete.setOnAction(e -> doDelete());
         btnSave.setOnAction(e -> {
             dbManager.commitPending();
             btnSave.setDisable(true);
             showInfo("Saved.");
         });
+    }
+
+    private ToolBar createToolbar() {
+        Button btnFind = new Button("Find");
+        Button btnAdd   = new Button("Add");
+        Button btnQuit  = new Button("Quit");
+
+        btnFind.setOnAction(e -> doFind());
+        btnAdd.setOnAction(e -> doAdd());
 //        btnQuit.setOnAction(e -> Platform.exit());
         btnQuit.setOnAction(e -> {
             // 이벤트 소스인 버튼의 Scene에서 Stage 참조 얻기
@@ -130,9 +141,35 @@ public class MedicationHelperApp extends Application {
 
         return new ToolBar(
                 btnFind, new Separator(),
-                btnEdit, btnAdd, btnDelete,
-                new Separator(), btnSave,
+                btnAdd,
                 new Separator(), btnQuit);
+    }
+
+    private VBox createActionFrame() {
+        VBox frame = new VBox(10);
+        frame.setPadding(new Insets(12));
+        frame.setPrefWidth(240);
+        frame.setStyle("""
+                -fx-background-color: #f7f9fc;
+                -fx-border-color: #dfe3eb;
+                -fx-border-radius: 8;
+                -fx-background-radius: 8;
+                """);
+
+        Label title = new Label("Edit / Delete / Save");
+        title.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+
+        selectionLabel = new Label("No medication selected");
+        selectionLabel.setWrapText(true);
+        selectionLabel.setStyle("-fx-text-fill: #444;");
+
+        btnEdit.setMaxWidth(Double.MAX_VALUE);
+        btnDelete.setMaxWidth(Double.MAX_VALUE);
+        btnSave.setMaxWidth(Double.MAX_VALUE);
+
+        frame.getChildren().addAll(title, selectionLabel, btnEdit, btnDelete, btnSave);
+        VBox.setVgrow(selectionLabel, Priority.NEVER);
+        return frame;
     }
 
     private TabPane createTabPane() {
@@ -169,10 +206,21 @@ public class MedicationHelperApp extends Application {
     private void updateButtons(ListView<MedicationItem> lv) {
         MedicationItem sel = lv.getSelectionModel().getSelectedItem();
         boolean ok = sel != null && !isSeparator(sel.getText());
-        boolean focused = lv.isFocused();
 
-        btnEdit.setDisable(!focused || !ok);
-        btnDelete.setDisable(!focused || !ok);
+        if (ok) {
+            activeListView = lv;
+            activeItem = sel;
+        } else if (lv == activeListView) {
+            activeItem = null;
+        }
+
+        if (selectionLabel != null) {
+            selectionLabel.setText(activeItem != null ? activeItem.getText() : "No medication selected");
+        }
+
+        boolean hasSelection = activeItem != null;
+        btnEdit.setDisable(!hasSelection);
+        btnDelete.setDisable(!hasSelection);
         btnSave.setDisable(!dbManager.hasPendingChanges());
     }
 
@@ -233,11 +281,13 @@ public class MedicationHelperApp extends Application {
     }
 
     private void doEdit() {
-        ListView<MedicationItem> lv = currentListView();
-        if (lv == null) return;
+        ListView<MedicationItem> lv = activeListView;
+        if (lv == null || activeItem == null) {
+            showError("Select a medication first.");
+            return;
+        }
 
-        MedicationItem it = lv.getSelectionModel().getSelectedItem();
-        if (it == null || isSeparator(it.getText())) return;
+        MedicationItem it = activeItem;
 
         TextInputDialog d = new TextInputDialog(it.getText());
         d.setTitle("Edit");
@@ -246,8 +296,11 @@ public class MedicationHelperApp extends Application {
             if (!nt.equals(it.getText())) {
                 it.setText(nt);
                 lv.refresh();
+                lv.getSelectionModel().select(it);
+                activeItem = it;
                 dbManager.updateMedication(it.getId(), nt);
                 btnSave.setDisable(false);
+                updateButtons(lv);
             }
         });
     }
@@ -279,11 +332,13 @@ public class MedicationHelperApp extends Application {
     }
 
     private void doDelete() {
-        ListView<MedicationItem> lv = currentListView();
-        if (lv == null) return;
+        ListView<MedicationItem> lv = activeListView;
+        if (lv == null || activeItem == null) {
+            showError("Select a medication first.");
+            return;
+        }
 
-        MedicationItem it = lv.getSelectionModel().getSelectedItem();
-        if (it == null || isSeparator(it.getText())) return;
+        MedicationItem it = activeItem;
 
         Alert a = new Alert(Alert.AlertType.CONFIRMATION,
                 "Delete \"" + it.getText() + "\" ?", ButtonType.YES, ButtonType.NO);
@@ -292,7 +347,9 @@ public class MedicationHelperApp extends Application {
                 .ifPresent(r -> {
                     lv.getItems().remove(it);
                     dbManager.deleteMedication(it.getId());
+                    activeItem = null;
                     btnSave.setDisable(false);
+                    updateButtons(lv);
                 });
     }
 
@@ -339,7 +396,7 @@ public class MedicationHelperApp extends Application {
         // Comment area is index 9 (0-based)
         int commentAreaIndex = 9;
         managerOpt.get().focusArea(commentAreaIndex);
-        managerOpt.get().insertBlockIntoFocusedArea(text + "\n");
+        managerOpt.get().insertBlockIntoFocusedArea(text + ".");
         showInfo("Saved to EMR (Comment area).");
     }
 
@@ -489,15 +546,15 @@ public class MedicationHelperApp extends Application {
                 (11,'Lipitor [ 40 ] mg 1 tab p.o. q.d.',4),
                 (11,'Lipitor plus [ 10/10 ] mg 1 tab p.o. q.d.',5),
 
-                (12,'...Plan to FBS, HbA1c \\n',1),
-                (12,'...Plan to FBS, HbA1c, +A/C \\n',2),
-                (12,'...Obtain CUS : [ Carotid artery Ultrasonography ]\\n',3),
-                (12,'[ → ] advised the patient to continue with current medication\\n',4),
-                (12,'[ ↓ ] decreased the dose of current medication\\n',5),
-                (12,'[ ↑ ] increased the dose of current medication\\n',6),
-                (12,'[ ↔ ] changed the dose of current medication\\n',7),
-                (12,' |→ Starting new medication\\n',8),
-                (12,' →| discontinue current medication\\n',9);
+                (12,'...Plan to FBS, HbA1c ',1),
+                (12,'...Plan to FBS, HbA1c, +A/C',2),
+                (12,'...Obtain CUS : [ Carotid artery Ultrasonography ]',3),
+                (12,'[ → ] advised the patient to continue with current medication',4),
+                (12,'[ ↓ ] decreased the dose of current medication',5),
+                (12,'[ ↑ ] increased the dose of current medication',6),
+                (12,'[ ↔ ] changed the dose of current medication',7),
+                (12,' |→ Starting new medication',8),
+                (12,' →| discontinue current medication',9);
                 """;
 
         public DatabaseManager() {

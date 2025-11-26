@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 // Import for KCDDatabaseManagerJavaFX
 import com.emr.gds.main.KCDDatabaseManagerJavaFX;
+import com.emr.gds.meds.Glp1SemaglutidePane;
 
 /**
  * Manages the creation and actions for the top and bottom toolbars of the application.
@@ -149,6 +150,7 @@ public class IAMButtonAction {
         tb.getItems().add(createKCD9Button("KCD-9")); // KCD-9 button creation
         tb.getItems().add(createThyroidButton("Thyroid"));
         tb.getItems().add(createMedicationHelperButton("Medication Helper"));
+        tb.getItems().add(createGlp1Button("GLP-1"));
         tb.setPadding(new Insets(9, 0, 0, 0));
         return tb;
     }
@@ -285,6 +287,28 @@ public class IAMButtonAction {
                     medsApp.start(medsStage); // This will set up and show the window
                 } catch (Exception ex) {
                     System.err.println("Failed to open Medication Helper application: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            });
+        });
+        return b;
+    }
+
+    private Button createGlp1Button(String title) {
+        Button b = new Button(title);
+        b.setOnAction(e -> {
+            Platform.runLater(() -> {
+                try {
+                    Stage glp1Stage = new Stage();
+                    glp1Stage.setTitle("GLP-1RA (Semaglutide) Manager");
+                    
+                    Glp1SemaglutidePane pane = new Glp1SemaglutidePane();
+                    Scene scene = new Scene(pane, 550, 700);
+                    
+                    glp1Stage.setScene(scene);
+                    glp1Stage.show();
+                } catch (Exception ex) {
+                    System.err.println("Failed to open GLP-1 application: " + ex.getMessage());
                     ex.printStackTrace();
                 }
             });

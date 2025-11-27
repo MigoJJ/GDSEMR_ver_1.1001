@@ -1,9 +1,12 @@
 package com.emr.gds.main.glp1;
 
+import com.emr.gds.input.IAIMain;
+import com.emr.gds.input.IAITextAreaManager;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextArea;
@@ -28,16 +31,44 @@ public class Glp1SemaglutideMain extends Application {
         txtOutput.setWrapText(true);
 
         // Buttons
-        Button btnExport = new Button("Export to EMR Text");
+        Button btnExport = new Button("Generate to EMR");
+        Button btnSave   = new Button("Save to EMR");
         Button btnClear  = new Button("Clear All");
+        Button btnQuit   = new Button("Quit");
 
         btnExport.setOnAction(e -> txtOutput.setText(medPane.toProblemListString()));
         btnClear.setOnAction(e -> {
             medPane.clearAll();
             txtOutput.clear();
         });
+        btnSave.setOnAction(e -> {
+            String content = txtOutput.getText().trim();
+            if (content.isEmpty()) {
+                new Alert(Alert.AlertType.INFORMATION, "Nothing to save. Generate text first.").showAndWait();
+                return;
+            }
 
-        HBox buttonBox = new HBox(10, btnExport, btnClear);
+            IAIMain.getManagerSafely().ifPresentOrElse(
+                    manager -> {
+                        String textToAppend = content.endsWith("\n") ? content : content + "\n";
+                        manager.appendTextToSection(IAITextAreaManager.AREA_PI, textToAppend);
+
+                        String assessmentLine = medPane.toAssessmentSummary();
+                        if (!assessmentLine.isBlank()) {
+                            manager.appendTextToSection(IAITextAreaManager.AREA_A, assessmentLine + "\n");
+                        }
+
+                        new Alert(Alert.AlertType.INFORMATION, "Saved to PI> and A> in EMR.").showAndWait();
+                    },
+                    () -> new Alert(
+                            Alert.AlertType.ERROR,
+                            "EMR mainframe is not connected.\nOpen this tool from the EMR to enable saving."
+                    ).showAndWait()
+            );
+        });
+        btnQuit.setOnAction(e -> stage.close());
+
+        HBox buttonBox = new HBox(10, btnExport, btnSave, btnClear, btnQuit);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         buttonBox.setPadding(new Insets(6));
 

@@ -363,6 +363,40 @@ public class Glp1SemaglutidePane extends VBox {
     }
 
     /**
+     * Concise summary for Assessment (A>): brand, dose, and next visit date.
+     */
+    public String toAssessmentSummary() {
+        String brand = cmbBrand.getValue() == null ? "" : cmbBrand.getValue().trim();
+        String presetDose = cmbDose.getValue() == null ? "" : cmbDose.getValue().trim();
+        String customDose = txtDoseCustom.getText() == null ? "" : txtDoseCustom.getText().trim();
+        String dose = !presetDose.isEmpty() ? presetDose : customDose;
+        LocalDate nextVisit = dpNextFollowUp.getValue();
+
+        if (brand.isEmpty() && dose.isEmpty() && nextVisit == null) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder("GLP-1RA (Semaglutide): ");
+        boolean hasEntry = false;
+
+        if (!brand.isEmpty()) {
+            sb.append("Brand: ").append(brand);
+            hasEntry = true;
+        }
+        if (!dose.isEmpty()) {
+            if (hasEntry) sb.append(" | ");
+            sb.append("Dose: ").append(dose);
+            hasEntry = true;
+        }
+        if (nextVisit != null) {
+            if (hasEntry) sb.append(" | ");
+            sb.append("Next visit: ").append(nextVisit);
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * Reset all fields to default / empty state.
      */
     public void clearAll() {

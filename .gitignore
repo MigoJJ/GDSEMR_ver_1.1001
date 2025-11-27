@@ -4,5 +4,14 @@
 !src/main/resources/database/emr_templates.db
 !src/main/resources/database/prolist.db
 .gradle/
-build/
+.gradle-cache/
+.gradle-local/
+wrapper/dists/
+
+# Build outputs
+**/build/
+**/bin/
+
+# Local logs and helpers
+*.log
 .aider*

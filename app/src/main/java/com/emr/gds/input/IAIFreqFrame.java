@@ -94,7 +94,7 @@ public class IAIFreqFrame extends Stage {
             String report = String.format("\n< BMI >\n%s : BMI: [ %.2f ] kg/m^2\nHeight : %.1f cm   Weight : %.1f kg%s",
                     category, bmi, height, weight, waist.isEmpty() ? "" : "   Waist: " + waist + " cm");
 
-            IAIMain.getTextAreaManager().insertBlockIntoFocusedArea(report);
+            IAIMain.getTextAreaManager().appendTextToSection(IAITextAreaManager.AREA_O, report + "\n");
             for (TextField field : bmiInputs) field.clear();
             bmiInputs[0].requestFocus();
         } catch (NumberFormatException ex) {

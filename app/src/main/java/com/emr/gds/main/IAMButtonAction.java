@@ -3,6 +3,7 @@ package com.emr.gds.main;
 import com.emr.gds.IttiaApp;
 import com.emr.gds.input.IAITextAreaManager;
 import com.emr.gds.main.glp1.Glp1SemaglutideMain;
+import com.emr.gds.main.thyroid.ThyroidDisordersApp;
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -225,7 +226,6 @@ public class IAMButtonAction {
         tb.getItems().add(createVaccineButton("Vaccine"));
         tb.getItems().add(createKCD9Button("KCD-9")); // KCD-9 button creation
 //        tb.getItems().add(createThyroidButton("Thyroid"));
-        tb.getItems().add(createMedicationHelperButton("Medication Helper"));
         tb.getItems().add(createGlp1Button("GLP-1"));
         tb.setPadding(new Insets(9, 0, 0, 0));
         return tb;
@@ -346,24 +346,6 @@ public class IAMButtonAction {
                     errorAlert.setContentText("An unexpected error occurred while trying to launch the Thyroid Diagnosis System.\n" +
                                             "Details: " + ex.getMessage());
                     errorAlert.showAndWait();
-                }
-            });
-        });
-        return b;
-    }
-
-    private Button createMedicationHelperButton(String title) {
-        Button b = new Button(title);
-        b.setOnAction(e -> {
-            Platform.runLater(() -> {
-                try {
-                    MedicationHelperApp medsApp = new MedicationHelperApp();
-                    medsApp.init(); // We need to call this manually
-                    Stage medsStage = new Stage();
-                    medsApp.start(medsStage); // This will set up and show the window
-                } catch (Exception ex) {
-                    System.err.println("Failed to open Medication Helper application: " + ex.getMessage());
-                    ex.printStackTrace();
                 }
             });
         });

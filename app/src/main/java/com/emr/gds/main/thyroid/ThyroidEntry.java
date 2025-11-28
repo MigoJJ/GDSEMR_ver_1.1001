@@ -1,415 +1,668 @@
 package com.emr.gds.main.thyroid;
 
-import com.emr.gds.input.IAIMain;
-import com.emr.gds.input.IAITextAreaManager;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Main Entry point for Thyroid Module.
- * Contains nested classes for specific sub-menus and forms.
+ * Data model for a single thyroid-related EMR snapshot or visit.
+ * Designed to work with ThyroidPane.
  */
-public class ThyroidEntry {
+public class ThyroidEntry implements Serializable {
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> MainMenu.show());
+    private static final long serialVersionUID = 1L;
+
+    public enum VisitType {
+        NEW,
+        FOLLOW_UP,
+        POST_OP,
+        POST_RAI
     }
 
-    // =================================================================================
-    // 1. MAIN MENU
-    // =================================================================================
-    public static class MainMenu {
-        public static void show() {
-            JFrame frame = UIHelper.createFrame("Select category ...", 300, 460);
-            frame.setLocation(0, 610);
-            frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
-
-            String[] menuItems = {
-                "Thyroid Physical examination",
-                "Pregnancy with Thyroid Disease",
-                "Hyperthyroidism Symptom",
-                "Hypothyroidism Symptom",
-                "Medications",
-                "Abnormal TFT on Routine check",
-                "Thyroidal nodule",
-                "Post operation F/U PTC",
-                "Quit"
-            };
-
-            for (String item : menuItems) {
-                JButton button = UIHelper.createStyledButton(item);
-                button.setPreferredSize(new Dimension(200, 40));
-                button.setMaximumSize(new Dimension(200, 40));
-                button.setAlignmentX(Box.CENTER_ALIGNMENT);
-                
-                button.addActionListener(e -> handleAction(frame, item));
-                
-                frame.add(button);
-                frame.add(Box.createVerticalStrut(10));
-            }
-
-            // Auto-close timer (5 mins)
-            UIHelper.addAutoCloseTimer(frame, 300000);
-            frame.setVisible(true);
-        }
-
-        private static void handleAction(JFrame frame, String command) {
-            switch (command) {
-                case "Quit" -> frame.dispose();
-                case "Thyroid Physical examination" -> new PhysicalExam();
-                case "Pregnancy with Thyroid Disease" -> PregnancyMenu.show();
-                case "Hyperthyroidism Symptom", "Hypothyroidism Symptom", "Medications" -> 
-                    JOptionPane.showMessageDialog(frame, command + " module not available.");
-                default -> { /* Placeholder for others */ }
-            }
-        }
+    public enum MainCategory {
+        HYPOTHYROIDISM,
+        HYPERTHYROIDISM,
+        NODULE,
+        CANCER,
+        THYROIDITIS,
+        GOITER,
+        OTHER
     }
 
-    // =================================================================================
-    // 2. PHYSICAL EXAM FORM
-    // =================================================================================
-    public static class PhysicalExam extends JFrame {
-        private static final String[][] EXAM_SECTIONS = {
-            {"Goiter Ruled", "Goiter ruled out", "Goiter ruled in Diffuse Enlargement", "Goiter ruled in Nodular Enlargement", "Single Nodular Goiter", "Multiple Nodular Goiter"},
-            {"Detect any nodules", "None", "Single nodule", "Multinodular Goiter"},
-            {"Thyroid gland consistency", "Soft", "Soft to Firm", "Firm", "Cobble-stone", "Firm to Hard", "Hard"},
-            {"Evaluate the thyroid gland for tenderness", "Tender", "Non-tender"},
-            {"Systolic or continuous Bruit (y/n)", "Yes", "No"},
-            {"DTR deep tendon reflex", "1+ = present but depressed", "2+ = normal / average", "3+ = increased", "4+ = clonus", "Doctor has not performed DTR test"},
-            {"TED: Thyroid Eye Disease", "Class 0: No signs", "Class 1: Only signs", "Class 2: Soft tissue", "Class 3: Proptosis", "Class 4: EOM involvement", "Class 5: Corneal", "Class 6: Sight loss"}
-        };
-
-        private final JTextField goiterSizeField = new JTextField(10);
-        private final JTextArea outputArea = new JTextArea();
-        private final JCheckBox[][] checkBoxGroups = new JCheckBox[EXAM_SECTIONS.length][];
-
-        public PhysicalExam() {
-            UIHelper.setupFrame(this, "Thyroid Physical Exam", 1000, 1000);
-            setLayout(new BorderLayout());
-
-            // --- Top Panel (Inputs) ---
-            JPanel inputPanel = new JPanel(new GridLayout(3, 3));
-            
-            // Goiter Size Section
-            JPanel sizePanel = new JPanel();
-            sizePanel.add(new JLabel("Goiter size (mL) "));
-            goiterSizeField.setPreferredSize(new Dimension(100, 35));
-            sizePanel.add(goiterSizeField);
-            inputPanel.add(sizePanel);
-
-            // Checkbox Sections
-            for (int i = 0; i < EXAM_SECTIONS.length; i++) {
-                JPanel sectionPanel = new JPanel();
-                sectionPanel.setLayout(new BoxLayout(sectionPanel, BoxLayout.Y_AXIS));
-                sectionPanel.setBorder(BorderFactory.createTitledBorder(EXAM_SECTIONS[i][0]));
-
-                checkBoxGroups[i] = new JCheckBox[EXAM_SECTIONS[i].length - 1];
-                for (int j = 0; j < checkBoxGroups[i].length; j++) {
-                    checkBoxGroups[i][j] = new JCheckBox(EXAM_SECTIONS[i][j + 1]);
-                    sectionPanel.add(checkBoxGroups[i][j]);
-                }
-                inputPanel.add(sectionPanel);
-            }
-
-            // --- Bottom Panel (Buttons) ---
-            JPanel btnPanel = new JPanel(new FlowLayout());
-            JButton btnClear = new JButton("Clear");
-            JButton btnExec = new JButton("Execute");
-            JButton btnSave = new JButton("Save and Quit");
-
-            btnClear.addActionListener(e -> clearForm());
-            btnExec.addActionListener(e -> generateReport());
-            btnSave.addActionListener(e -> {
-                IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_PE, outputArea.getText(), true);
-                dispose();
-            });
-
-            btnPanel.add(btnClear);
-            btnPanel.add(btnExec);
-            btnPanel.add(btnSave);
-
-            add(inputPanel, BorderLayout.NORTH);
-            add(new JScrollPane(outputArea), BorderLayout.CENTER);
-            add(btnPanel, BorderLayout.SOUTH);
-            setVisible(true);
-        }
-
-        private void generateReport() {
-            StringBuilder sb = new StringBuilder("<Thyroid Exam>\n");
-            sb.append("   Goiter size  :\t[ ").append(goiterSizeField.getText()).append("  ] cc\n");
-
-            String[] labels = {"Goiter", "Nodules", "Consistency", "Tenderness", "Bruit", "DTR", "Werner's Report"};
-            for (int i = 0; i < checkBoxGroups.length; i++) {
-                sb.append(String.format("   %-12s:\t%s\n", labels[i], UIHelper.getSelectedText(checkBoxGroups[i])));
-            }
-            outputArea.setText(sb.toString());
-        }
-
-        private void clearForm() {
-            goiterSizeField.setText("");
-            outputArea.setText("");
-            for (JCheckBox[] group : checkBoxGroups) {
-                for (JCheckBox box : group) box.setSelected(false);
-            }
-        }
+    public enum HypoEtiology {
+        HASHIMOTO,
+        IATROGENIC,
+        POST_RAI,
+        POST_OP,
+        SUBCLINICAL,
+        OTHER
     }
 
-    // =================================================================================
-    // 3. PREGNANCY CHIEF COMPLAINT
-    // =================================================================================
-    public static class PregnancyCC extends JFrame {
-        private static final String[] LABELS = {"Pregnancy #:", "Weeks:", "Due Date:", "Diagnosis:", "Transferred from GY:"};
-        private final JTextField[] inputs = new JTextField[LABELS.length];
-
-        public PregnancyCC() {
-            UIHelper.setupFrame(this, "Thyroid Pregnancy Input", 0, 0); // Pack will handle size
-            JPanel mainPanel = new JPanel(new GridLayout(0, 1));
-
-            for (int i = 0; i < LABELS.length; i++) {
-                JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-                inputs[i] = new JTextField(10);
-                inputs[i].setHorizontalAlignment(SwingConstants.CENTER);
-                
-                // Enter key navigation
-                int finalI = i;
-                inputs[i].addKeyListener(new KeyAdapter() {
-                    public void keyPressed(KeyEvent e) {
-                        if (e.getKeyCode() == KeyEvent.VK_ENTER && finalI < LABELS.length - 1) 
-                            inputs[finalI + 1].requestFocus();
-                    }
-                });
-
-                row.add(new JLabel(LABELS[i]));
-                row.add(inputs[i]);
-                mainPanel.add(row);
-            }
-
-            JButton btnAdd = new JButton("Add Pregnancy");
-            btnAdd.addActionListener(e -> saveAndClose());
-            mainPanel.add(btnAdd);
-
-            add(mainPanel);
-            pack();
-            setLocationRelativeTo(null);
-            setVisible(true);
-        }
-
-        private void saveAndClose() {
-            String diag = switch (inputs[3].getText().trim()) {
-                case "o" -> "Hypothyroidism Diagnosed";
-                case "e" -> "Hyperthyroidism diagnosed";
-                case "n" -> "TFT abnormality";
-                default -> "Unknown Diagnosis";
-            };
-            
-            String hospital = switch (inputs[4].getText().trim()) {
-                case "c" -> "Cheongdam Marie OBGYN";
-                case "d" -> "Dogok Hamchoon OBGYN";
-                case "o" -> "Other OBGYN";
-                default -> "Unknown Hospital";
-            };
-
-            String result = String.format("# %s pregnancy  %s weeks  Due-date %s \n\t%s at %s%n",
-                    inputs[0].getText(), inputs[1].getText(), inputs[2].getText(), diag, hospital);
-
-            IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_CC, result, true);
-            IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_A, result, false);
-            dispose();
-        }
+    public enum HyperEtiology {
+        GRAVES,
+        TOXIC_MNG,
+        TOXIC_ADENOMA,
+        THYROIDITIS,
+        OTHER
     }
 
-    // =================================================================================
-    // 4. PREGNANCY HISTORY FORMS (Hyper & Hypo)
-    // =================================================================================
-    public static class PregnancyHistoryBase extends JFrame {
-        public PregnancyHistoryBase(String title, String[] sections, String[][] items) {
-            UIHelper.setupFrame(this, title, 0, 0);
-            setLayout(new GridLayout(4, 2));
-
-            for (int i = 0; i < sections.length; i++) {
-                JPanel panel = new JPanel();
-                panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-                panel.setBorder(BorderFactory.createTitledBorder(sections[i]));
-                
-                if (i < items.length) {
-                    for (String item : items[i]) panel.add(new JCheckBox(item));
-                }
-                add(panel);
-            }
-            pack();
-            setLocationRelativeTo(null);
-            setVisible(true);
-        }
+    public enum CancerHistology {
+        PTC,
+        FTC,
+        MTC,
+        ATC,
+        OTHER
     }
 
-    public static class PregnancyHyperHistory extends PregnancyHistoryBase {
-        public PregnancyHyperHistory() {
-            super("Hyperthyroidism with pregnancy Medical History", 
-                new String[]{
-                    "Personal Medical History", "Family Medical History", "Current Pregnancy Details",
-                    "Symptoms", "Medications", "Previous Pregnancy History", "Laboratory Tests", "Other Medical Conditions"
-                },
-                new String[][]{
-                    {"Previous diagnosis of hyperthyroidism", "Any previous treatments", "History of thyroid surgery/RAI"},
-                    {"Family history of thyroid disorders", "Family history of hyperthyroidism during pregnancy"},
-                    {"Gestational age (weeks)", "Complications/High-risk factors"},
-                    {"Weight loss/No gain", "Rapid heartbeat", "Tremors", "Heat sensitivity", "Fatigue", "Sleep issues", "Diarrhea", "Mood changes"},
-                    {"Current medications", "Changes in dosage"},
-                    {"History in previous pregnancies", "Complications in previous"},
-                    {"TFT results (TSH, T3, T4)", "Antibody tests"},
-                    {"Other chronic illnesses", "Autoimmune conditions", "Graves' disease", "Thyroid storm", "Thyroid eye disease"}
-                }
-            );
-        }
+    // Basic info
+    private VisitType visitType;
+    private List<MainCategory> categories = new ArrayList<>();
+
+    // Hypo / Hyper details
+    private HypoEtiology hypoEtiology;
+    private Boolean hypoOvert;
+    private HyperEtiology hyperEtiology;
+    private Boolean hyperActive;
+
+    // Cancer related
+    private CancerHistology cancerHistology;
+    private String tnmStage;
+    private String ataRisk;
+
+    // Detailed ATA Risk Factors
+    private Boolean grossExtrathyroidalExtension;
+    private Boolean incompleteResection;
+    private Boolean distantMetastases;
+    private Boolean aggressiveHistology;
+    private Boolean vascularInvasion;
+    private Integer lymphNodeCount;
+    private Double largestNodeSizeCm;
+
+    private Boolean raiDone;
+    private Double raiDoseMci;
+    private LocalDate raiDate;
+    private String cancerStatus;
+
+    // Patient details
+    private Double patientWeightKg;
+
+    // Nodule / TI-RADS
+    private Integer tiRadsScore;
+    private String tiRadsLevel;
+
+    // Labs
+    private Double tsh;
+    private Double freeT4;
+    private Double freeT3;
+    private Double tpoAb;
+    private Double tg;
+    private Double tgAb;
+    private Double trab;
+    private Double calcitonin;
+    private LocalDate lastLabDate;
+
+    // Treatment
+    private Double lt4DoseMcgPerDay;
+    private String atdName;
+    private Double atdDoseMgPerDay;
+    private String betaBlockerName;
+    private String betaBlockerDose;
+    private String otherMeds;
+
+    // Imaging
+    private String usSummary;
+    private LocalDate usDate;
+    private String scanSummary;
+    private LocalDate scanDate;
+
+    // Follow-up
+    private String followUpInterval;
+    private String followUpPlanText;
+
+    // Notes
+    private String clinicianNote;
+    private String problemListSummary;
+
+    public ThyroidEntry() {
     }
 
-    public static class PregnancyHypoHistory extends PregnancyHistoryBase {
-        public PregnancyHypoHistory() {
-            super("Hypothyroidism with pregnancy Medical History",
-                new String[]{
-                    "Personal Medical History", "Family Medical History", "Current Pregnancy Details",
-                    "Symptoms", "Medications", "Previous Pregnancy History", "Laboratory Tests", "Other Medical Conditions"
-                },
-                new String[][]{
-                    {"Previous diagnosis of hypothyroidism", "Previous treatments", "History of surgery"},
-                    {"Family history of thyroid disorders", "Family history during pregnancy"},
-                    {"Gestational age (weeks)", "Complications/High-risk factors"},
-                    {"Weight gain", "Fatigue", "Dry skin/hair", "Cold intolerance", "Depression"},
-                    {"Current medications", "Changes in dosage"},
-                    {"History in previous pregnancies", "Complications in previous"},
-                    {"TFT results", "Antibody tests"},
-                    {"Other chronic illnesses", "Autoimmune conditions"}
-                }
-            );
-        }
+    private ThyroidEntry(Builder builder) {
+        this.visitType = builder.visitType;
+        this.categories = builder.categories;
+        this.hypoEtiology = builder.hypoEtiology;
+        this.hypoOvert = builder.hypoOvert;
+        this.hyperEtiology = builder.hyperEtiology;
+        this.hyperActive = builder.hyperActive;
+        this.cancerHistology = builder.cancerHistology;
+        this.tnmStage = builder.tnmStage;
+        this.ataRisk = builder.ataRisk;
+        this.grossExtrathyroidalExtension = builder.grossExtrathyroidalExtension;
+        this.incompleteResection = builder.incompleteResection;
+        this.distantMetastases = builder.distantMetastases;
+        this.aggressiveHistology = builder.aggressiveHistology;
+        this.vascularInvasion = builder.vascularInvasion;
+        this.lymphNodeCount = builder.lymphNodeCount;
+        this.largestNodeSizeCm = builder.largestNodeSizeCm;
+        this.raiDone = builder.raiDone;
+        this.raiDoseMci = builder.raiDoseMci;
+        this.raiDate = builder.raiDate;
+        this.cancerStatus = builder.cancerStatus;
+        this.patientWeightKg = builder.patientWeightKg;
+        this.tiRadsScore = builder.tiRadsScore;
+        this.tiRadsLevel = builder.tiRadsLevel;
+        this.tsh = builder.tsh;
+        this.freeT4 = builder.freeT4;
+        this.freeT3 = builder.freeT3;
+        this.tpoAb = builder.tpoAb;
+        this.tg = builder.tg;
+        this.tgAb = builder.tgAb;
+        this.trab = builder.trab;
+        this.calcitonin = builder.calcitonin;
+        this.lastLabDate = builder.lastLabDate;
+        this.lt4DoseMcgPerDay = builder.lt4DoseMcgPerDay;
+        this.atdName = builder.atdName;
+        this.atdDoseMgPerDay = builder.atdDoseMgPerDay;
+        this.betaBlockerName = builder.betaBlockerName;
+        this.betaBlockerDose = builder.betaBlockerDose;
+        this.otherMeds = builder.otherMeds;
+        this.usSummary = builder.usSummary;
+        this.usDate = builder.usDate;
+        this.scanSummary = builder.scanSummary;
+        this.scanDate = builder.scanDate;
+        this.followUpInterval = builder.followUpInterval;
+        this.followUpPlanText = builder.followUpPlanText;
+        this.clinicianNote = builder.clinicianNote;
+        this.problemListSummary = builder.problemListSummary;
     }
 
-    // =================================================================================
-    // 5. PREGNANCY MENU
-    // =================================================================================
-    public static class PregnancyMenu {
-        public static void show() {
-            JFrame frame = UIHelper.createFrame("Thyroid Pregnancy Management", 410, 400);
-            frame.setLayout(new GridLayout(0, 1));
-            
-            // Position bottom right
-            Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-            frame.setLocation(screen.width - 410, screen.height - 400);
+    // Getters and Setters
 
-            String[] buttons = {
-                "New Patient for Pregnancy with Thyroid disease",
-                "F/U Pregnancy with Normal Thyroid Function (TAb+)",
-                "Infertility and Thyroid Function Evaluation",
-                "F/U Pregnancy with Hyperthyroidism",
-                "F/U Pregnancy with TSH low (Hyperthyroidism/GTT)",
-                "F/U Pregnancy with Hypothyroidism",
-                "F/U Pregnancy with TSH elevation (Subclinical Hypothyroidism)",
-                "Postpartum Thyroiditis",
-                "Support Files",
-                "Quit"
-            };
+    public VisitType getVisitType() { return visitType; }
+    public void setVisitType(VisitType visitType) { this.visitType = visitType; }
 
-            for (String txt : buttons) {
-                JButton btn = UIHelper.createStyledButton(txt);
-                // Custom lighter gradient for this menu
-                btn.putClientProperty("colorTop", new Color(240, 230, 210));
-                btn.putClientProperty("colorBot", new Color(225, 215, 185));
-                
-                btn.addActionListener(e -> handleClick(frame, txt));
-                frame.add(btn);
+    public List<MainCategory> getCategories() { return categories; }
+    public void setCategories(List<MainCategory> categories) { this.categories = (categories != null) ? categories : new ArrayList<>(); }
+
+    public HypoEtiology getHypoEtiology() { return hypoEtiology; }
+    public void setHypoEtiology(HypoEtiology hypoEtiology) { this.hypoEtiology = hypoEtiology; }
+
+    public Boolean isHypoOvert() { return hypoOvert; }
+    public void setHypoOvert(Boolean hypoOvert) { this.hypoOvert = hypoOvert; }
+
+    public HyperEtiology getHyperEtiology() { return hyperEtiology; }
+    public void setHyperEtiology(HyperEtiology hyperEtiology) { this.hyperEtiology = hyperEtiology; }
+
+    public Boolean isHyperActive() { return hyperActive; }
+    public void setHyperActive(Boolean hyperActive) { this.hyperActive = hyperActive; }
+
+    public CancerHistology getCancerHistology() { return cancerHistology; }
+    public void setCancerHistology(CancerHistology cancerHistology) { this.cancerHistology = cancerHistology; }
+
+    public String getTnmStage() { return tnmStage; }
+    public void setTnmStage(String tnmStage) { this.tnmStage = tnmStage; }
+
+    public String getAtaRisk() { return ataRisk; }
+    public void setAtaRisk(String ataRisk) { this.ataRisk = ataRisk; }
+
+    public Boolean getGrossExtrathyroidalExtension() { return grossExtrathyroidalExtension; }
+    public void setGrossExtrathyroidalExtension(Boolean grossExtrathyroidalExtension) { this.grossExtrathyroidalExtension = grossExtrathyroidalExtension; }
+
+    public Boolean getIncompleteResection() { return incompleteResection; }
+    public void setIncompleteResection(Boolean incompleteResection) { this.incompleteResection = incompleteResection; }
+
+    public Boolean getDistantMetastases() { return distantMetastases; }
+    public void setDistantMetastases(Boolean distantMetastases) { this.distantMetastases = distantMetastases; }
+
+    public Boolean getAggressiveHistology() { return aggressiveHistology; }
+    public void setAggressiveHistology(Boolean aggressiveHistology) { this.aggressiveHistology = aggressiveHistology; }
+
+    public Boolean getVascularInvasion() { return vascularInvasion; }
+    public void setVascularInvasion(Boolean vascularInvasion) { this.vascularInvasion = vascularInvasion; }
+
+    public Integer getLymphNodeCount() { return lymphNodeCount; }
+    public void setLymphNodeCount(Integer lymphNodeCount) { this.lymphNodeCount = lymphNodeCount; }
+
+    public Double getLargestNodeSizeCm() { return largestNodeSizeCm; }
+    public void setLargestNodeSizeCm(Double largestNodeSizeCm) { this.largestNodeSizeCm = largestNodeSizeCm; }
+
+    public Boolean getRaiDone() { return raiDone; }
+    public void setRaiDone(Boolean raiDone) { this.raiDone = raiDone; }
+
+    public Double getRaiDoseMci() { return raiDoseMci; }
+    public void setRaiDoseMci(Double raiDoseMci) { this.raiDoseMci = raiDoseMci; }
+
+    public LocalDate getRaiDate() { return raiDate; }
+    public void setRaiDate(LocalDate raiDate) { this.raiDate = raiDate; }
+
+    public String getCancerStatus() { return cancerStatus; }
+    public void setCancerStatus(String cancerStatus) { this.cancerStatus = cancerStatus; }
+
+    public Double getPatientWeightKg() { return patientWeightKg; }
+    public void setPatientWeightKg(Double patientWeightKg) { this.patientWeightKg = patientWeightKg; }
+
+    public Integer getTiRadsScore() { return tiRadsScore; }
+    public void setTiRadsScore(Integer tiRadsScore) { this.tiRadsScore = tiRadsScore; }
+
+    public String getTiRadsLevel() { return tiRadsLevel; }
+    public void setTiRadsLevel(String tiRadsLevel) { this.tiRadsLevel = tiRadsLevel; }
+
+    public Double getTsh() { return tsh; }
+    public void setTsh(Double tsh) { this.tsh = tsh; }
+
+    public Double getFreeT4() { return freeT4; }
+    public void setFreeT4(Double freeT4) { this.freeT4 = freeT4; }
+
+    public Double getFreeT3() { return freeT3; }
+    public void setFreeT3(Double freeT3) { this.freeT3 = freeT3; }
+
+    public Double getTpoAb() { return tpoAb; }
+    public void setTpoAb(Double tpoAb) { this.tpoAb = tpoAb; }
+
+    public Double getTg() { return tg; }
+    public void setTg(Double tg) { this.tg = tg; }
+
+    public Double getTgAb() { return tgAb; }
+    public void setTgAb(Double tgAb) { this.tgAb = tgAb; }
+
+    public Double getTrab() { return trab; }
+    public void setTrab(Double trab) { this.trab = trab; }
+
+    public Double getCalcitonin() { return calcitonin; }
+    public void setCalcitonin(Double calcitonin) { this.calcitonin = calcitonin; }
+
+    public LocalDate getLastLabDate() { return lastLabDate; }
+    public void setLastLabDate(LocalDate lastLabDate) { this.lastLabDate = lastLabDate; }
+
+    public Double getLt4DoseMcgPerDay() { return lt4DoseMcgPerDay; }
+    public void setLt4DoseMcgPerDay(Double lt4DoseMcgPerDay) { this.lt4DoseMcgPerDay = lt4DoseMcgPerDay; }
+
+    public String getAtdName() { return atdName; }
+    public void setAtdName(String atdName) { this.atdName = atdName; }
+
+    public Double getAtdDoseMgPerDay() { return atdDoseMgPerDay; }
+    public void setAtdDoseMgPerDay(Double atdDoseMgPerDay) { this.atdDoseMgPerDay = atdDoseMgPerDay; }
+
+    public String getBetaBlockerName() { return betaBlockerName; }
+    public void setBetaBlockerName(String betaBlockerName) { this.betaBlockerName = betaBlockerName; }
+
+    public String getBetaBlockerDose() { return betaBlockerDose; }
+    public void setBetaBlockerDose(String betaBlockerDose) { this.betaBlockerDose = betaBlockerDose; }
+
+    public String getOtherMeds() { return otherMeds; }
+    public void setOtherMeds(String otherMeds) { this.otherMeds = otherMeds; }
+
+    public String getUsSummary() { return usSummary; }
+    public void setUsSummary(String usSummary) { this.usSummary = usSummary; }
+
+    public LocalDate getUsDate() { return usDate; }
+    public void setUsDate(LocalDate usDate) { this.usDate = usDate; }
+
+    public String getScanSummary() { return scanSummary; }
+    public void setScanSummary(String scanSummary) { this.scanSummary = scanSummary; }
+
+    public LocalDate getScanDate() { return scanDate; }
+    public void setScanDate(LocalDate scanDate) { this.scanDate = scanDate; }
+
+    public String getFollowUpInterval() { return followUpInterval; }
+    public void setFollowUpInterval(String followUpInterval) { this.followUpInterval = followUpInterval; }
+
+    public String getFollowUpPlanText() { return followUpPlanText; }
+    public void setFollowUpPlanText(String followUpPlanText) { this.followUpPlanText = followUpPlanText; }
+
+    public String getClinicianNote() { return clinicianNote; }
+    public void setClinicianNote(String clinicianNote) { this.clinicianNote = clinicianNote; }
+
+    public String getProblemListSummary() { return problemListSummary; }
+    public void setProblemListSummary(String problemListSummary) { this.problemListSummary = problemListSummary; }
+
+    /**
+     * Very small helper to build a compact problem-list summary.
+     */
+    public String buildProblemListSummary() {
+        StringBuilder sb = new StringBuilder();
+
+        if (categories != null && categories.contains(MainCategory.HYPOTHYROIDISM)) {
+            sb.append("Hypothyroidism");
+            if (hypoEtiology != null) {
+                sb.append(" (").append(hypoEtiology.name()).append(")");
             }
-
-            UIHelper.addAutoCloseTimer(frame, 300000);
-            frame.setVisible(true);
+            if (Boolean.TRUE.equals(hypoOvert)) {
+                sb.append(", overt");
+            } else if (Boolean.FALSE.equals(hypoOvert)) {
+                sb.append(", subclinical");
+            }
+            if (lt4DoseMcgPerDay != null) {
+                sb.append(" on LT4 ").append(lt4DoseMcgPerDay).append(" mcg/day");
+            }
+            sb.append(". ");
         }
 
-        private static void handleClick(JFrame frame, String text) {
-            if ("Quit".equals(text)) {
-                frame.dispose();
-                return;
+        if (categories != null && categories.contains(MainCategory.HYPERTHYROIDISM)) {
+            sb.append("Hyperthyroidism");
+            if (hyperEtiology != null) {
+                sb.append(" (").append(hyperEtiology.name()).append(")");
             }
-            if ("Support Files".equals(text)) {
-                JOptionPane.showMessageDialog(frame, "Module not available");
-                frame.dispose();
-                return;
+            if (Boolean.TRUE.equals(hyperActive)) {
+                sb.append(" - active.");
+            } else if (Boolean.FALSE.equals(hyperActive)) {
+                sb.append(" - in remission.");
             }
-            
-            // Logic actions
-            if (text.startsWith("New Patient")) new PregnancyCC();
-            else if (text.contains("Hyperthyroidism")) new PregnancyHyperHistory();
-            else if (text.contains("Hypothyroidism")) new PregnancyHypoHistory();
-
-            // EMR Text Update
-            if (!text.startsWith("New Patient")) {
-                String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
-                String condition = text.replace("F/U ", "");
-                
-                IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_CC, 
-                    String.format("F/U [   ] weeks    %s%n\t%s", date, condition), true);
-                IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_A, 
-                    String.format("%n  #  %s  [%s]", text, date), false);
-                IAIMain.getTextAreaManager().insertBlockIntoArea(IAITextAreaManager.AREA_P, 
-                    String.format("...Plan F/U [   ] weeks%n\t %s", condition), false);
-            }
+            sb.append(" ");
         }
+
+        if (categories != null && categories.contains(MainCategory.CANCER)) {
+            sb.append("Thyroid cancer");
+            if (cancerHistology != null) {
+                sb.append(" (").append(cancerHistology.name()).append(")");
+            }
+            if (tnmStage != null && !tnmStage.isBlank()) {
+                sb.append(", TNM ").append(tnmStage);
+            }
+            if (ataRisk != null && !ataRisk.isBlank()) {
+                sb.append(", ATA risk ").append(ataRisk);
+            }
+            if (cancerStatus != null && !cancerStatus.isBlank()) {
+                sb.append(", status ").append(cancerStatus);
+            }
+            sb.append(". ");
+        }
+
+        this.problemListSummary = sb.toString().trim();
+        return this.problemListSummary;
     }
 
-    // =================================================================================
-    // 6. UI HELPERS (Handling repetitive tasks)
-    // =================================================================================
-    private static class UIHelper {
-        public static JFrame createFrame(String title, int w, int h) {
-            JFrame f = new JFrame(title);
-            f.setSize(w, h);
-            f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            return f;
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private VisitType visitType;
+        private List<MainCategory> categories = new ArrayList<>();
+        private HypoEtiology hypoEtiology;
+        private Boolean hypoOvert;
+        private HyperEtiology hyperEtiology;
+        private Boolean hyperActive;
+        private CancerHistology cancerHistology;
+        private String tnmStage;
+        private String ataRisk;
+        private Boolean grossExtrathyroidalExtension;
+        private Boolean incompleteResection;
+        private Boolean distantMetastases;
+        private Boolean aggressiveHistology;
+        private Boolean vascularInvasion;
+        private Integer lymphNodeCount;
+        private Double largestNodeSizeCm;
+        private Boolean raiDone;
+        private Double raiDoseMci;
+        private LocalDate raiDate;
+        private String cancerStatus;
+        private Double patientWeightKg;
+        private Integer tiRadsScore;
+        private String tiRadsLevel;
+        private Double tsh;
+        private Double freeT4;
+        private Double freeT3;
+        private Double tpoAb;
+        private Double tg;
+        private Double tgAb;
+        private Double trab;
+        private Double calcitonin;
+        private LocalDate lastLabDate;
+        private Double lt4DoseMcgPerDay;
+        private String atdName;
+        private Double atdDoseMgPerDay;
+        private String betaBlockerName;
+        private String betaBlockerDose;
+        private String otherMeds;
+        private String usSummary;
+        private LocalDate usDate;
+        private String scanSummary;
+        private LocalDate scanDate;
+        private String followUpInterval;
+        private String followUpPlanText;
+        private String clinicianNote;
+        private String problemListSummary;
+
+        public Builder visitType(VisitType visitType) {
+            this.visitType = visitType;
+            return this;
         }
 
-        public static void setupFrame(JFrame f, String title, int w, int h) {
-            f.setTitle(title);
-            if (w > 0 && h > 0) f.setSize(w, h);
-            f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        public Builder addCategory(MainCategory category) {
+            if (category != null) {
+                this.categories.add(category);
+            }
+            return this;
         }
 
-        public static JButton createStyledButton(String text) {
-            JButton btn = new JButton(text) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    if (g instanceof Graphics2D g2d) {
-                        // Check for custom colors or use default
-                        Color c1 = (Color) getClientProperty("colorTop");
-                        Color c2 = (Color) getClientProperty("colorBot");
-                        if (c1 == null) c1 = new Color(210, 180, 140);
-                        if (c2 == null) c2 = new Color(180, 150, 110);
-                        
-                        g2d.setPaint(new GradientPaint(0, 0, c1, 0, getHeight(), c2));
-                        g2d.fillRect(0, 0, getWidth(), getHeight());
-                    }
-                    super.paintComponent(g);
-                }
-            };
-            btn.setFocusPainted(false);
-            btn.setContentAreaFilled(false);
-            return btn;
+        public Builder categories(List<MainCategory> categories) {
+            this.categories = (categories != null) ? categories : new ArrayList<>();
+            return this;
         }
 
-        public static void addAutoCloseTimer(JFrame frame, int delay) {
-            Timer t = new Timer(delay, e -> frame.dispose());
-            t.setRepeats(false);
-            t.start();
+        public Builder hypoEtiology(HypoEtiology hypoEtiology) {
+            this.hypoEtiology = hypoEtiology;
+            return this;
         }
 
-        public static String getSelectedText(JCheckBox[] boxes) {
-            return Arrays.stream(boxes)
-                    .filter(JCheckBox::isSelected)
-                    .map(JCheckBox::getText)
-                    .reduce((a, b) -> a + ", " + b)
-                    .orElse("");
+        public Builder hypoOvert(Boolean hypoOvert) {
+            this.hypoOvert = hypoOvert;
+            return this;
+        }
+
+        public Builder hyperEtiology(HyperEtiology hyperEtiology) {
+            this.hyperEtiology = hyperEtiology;
+            return this;
+        }
+
+        public Builder hyperActive(Boolean hyperActive) {
+            this.hyperActive = hyperActive;
+            return this;
+        }
+
+        public Builder cancerHistology(CancerHistology cancerHistology) {
+            this.cancerHistology = cancerHistology;
+            return this;
+        }
+
+        public Builder tnmStage(String tnmStage) {
+            this.tnmStage = tnmStage;
+            return this;
+        }
+
+        public Builder ataRisk(String ataRisk) {
+            this.ataRisk = ataRisk;
+            return this;
+        }
+
+        public Builder grossExtrathyroidalExtension(Boolean grossExtrathyroidalExtension) {
+            this.grossExtrathyroidalExtension = grossExtrathyroidalExtension;
+            return this;
+        }
+
+        public Builder incompleteResection(Boolean incompleteResection) {
+            this.incompleteResection = incompleteResection;
+            return this;
+        }
+
+        public Builder distantMetastases(Boolean distantMetastases) {
+            this.distantMetastases = distantMetastases;
+            return this;
+        }
+
+        public Builder aggressiveHistology(Boolean aggressiveHistology) {
+            this.aggressiveHistology = aggressiveHistology;
+            return this;
+        }
+
+        public Builder vascularInvasion(Boolean vascularInvasion) {
+            this.vascularInvasion = vascularInvasion;
+            return this;
+        }
+
+        public Builder lymphNodeCount(Integer lymphNodeCount) {
+            this.lymphNodeCount = lymphNodeCount;
+            return this;
+        }
+
+        public Builder largestNodeSizeCm(Double largestNodeSizeCm) {
+            this.largestNodeSizeCm = largestNodeSizeCm;
+            return this;
+        }
+
+        public Builder raiDone(Boolean raiDone) {
+            this.raiDone = raiDone;
+            return this;
+        }
+
+        public Builder raiDoseMci(Double raiDoseMci) {
+            this.raiDoseMci = raiDoseMci;
+            return this;
+        }
+
+        public Builder raiDate(LocalDate raiDate) {
+            this.raiDate = raiDate;
+            return this;
+        }
+
+        public Builder cancerStatus(String cancerStatus) {
+            this.cancerStatus = cancerStatus;
+            return this;
+        }
+
+        public Builder patientWeightKg(Double patientWeightKg) {
+            this.patientWeightKg = patientWeightKg;
+            return this;
+        }
+
+        public Builder tiRadsScore(Integer tiRadsScore) {
+            this.tiRadsScore = tiRadsScore;
+            return this;
+        }
+
+        public Builder tiRadsLevel(String tiRadsLevel) {
+            this.tiRadsLevel = tiRadsLevel;
+            return this;
+        }
+
+        public Builder tsh(Double tsh) {
+            this.tsh = tsh;
+            return this;
+        }
+
+        public Builder freeT4(Double freeT4) {
+            this.freeT4 = freeT4;
+            return this;
+        }
+
+        public Builder freeT3(Double freeT3) {
+            this.freeT3 = freeT3;
+            return this;
+        }
+
+        public Builder tpoAb(Double tpoAb) {
+            this.tpoAb = tpoAb;
+            return this;
+        }
+
+        public Builder tg(Double tg) {
+            this.tg = tg;
+            return this;
+        }
+
+        public Builder tgAb(Double tgAb) {
+            this.tgAb = tgAb;
+            return this;
+        }
+
+        public Builder trab(Double trab) {
+            this.trab = trab;
+            return this;
+        }
+
+        public Builder calcitonin(Double calcitonin) {
+            this.calcitonin = calcitonin;
+            return this;
+        }
+
+        public Builder lastLabDate(LocalDate lastLabDate) {
+            this.lastLabDate = lastLabDate;
+            return this;
+        }
+
+        public Builder lt4DoseMcgPerDay(Double lt4DoseMcgPerDay) {
+            this.lt4DoseMcgPerDay = lt4DoseMcgPerDay;
+            return this;
+        }
+
+        public Builder atdName(String atdName) {
+            this.atdName = atdName;
+            return this;
+        }
+
+        public Builder atdDoseMgPerDay(Double atdDoseMgPerDay) {
+            this.atdDoseMgPerDay = atdDoseMgPerDay;
+            return this;
+        }
+
+        public Builder betaBlockerName(String betaBlockerName) {
+            this.betaBlockerName = betaBlockerName;
+            return this;
+        }
+
+        public Builder betaBlockerDose(String betaBlockerDose) {
+            this.betaBlockerDose = betaBlockerDose;
+            return this;
+        }
+
+        public Builder otherMeds(String otherMeds) {
+            this.otherMeds = otherMeds;
+            return this;
+        }
+
+        public Builder usSummary(String usSummary) {
+            this.usSummary = usSummary;
+            return this;
+        }
+
+        public Builder usDate(LocalDate usDate) {
+            this.usDate = usDate;
+            return this;
+        }
+
+        public Builder scanSummary(String scanSummary) {
+            this.scanSummary = scanSummary;
+            return this;
+        }
+
+        public Builder scanDate(LocalDate scanDate) {
+            this.scanDate = scanDate;
+            return this;
+        }
+
+        public Builder followUpInterval(String followUpInterval) {
+            this.followUpInterval = followUpInterval;
+            return this;
+        }
+
+        public Builder followUpPlanText(String followUpPlanText) {
+            this.followUpPlanText = followUpPlanText;
+            return this;
+        }
+
+        public Builder clinicianNote(String clinicianNote) {
+            this.clinicianNote = clinicianNote;
+            return this;
+        }
+
+        public Builder problemListSummary(String problemListSummary) {
+            this.problemListSummary = problemListSummary;
+            return this;
+        }
+
+        public ThyroidEntry build() {
+            return new ThyroidEntry(this);
         }
     }
 }

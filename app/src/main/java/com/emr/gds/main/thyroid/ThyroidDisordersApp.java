@@ -1,13 +1,17 @@
-package com.emr.gds.main;
+package com.emr.gds.main.thyroid;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -20,6 +24,26 @@ public class ThyroidDisordersApp extends Application {
         VBox contentBox = new VBox(10); // Spacing between categories
         contentBox.setPadding(new Insets(15));
         contentBox.setAlignment(Pos.TOP_LEFT); // Align content to the top left
+
+        // --- TOOLS SECTION ---
+        Label toolsLabel = new Label("Clinical Tools");
+        toolsLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #2c3e50;");
+
+        HBox toolsBox = new HBox(10);
+        toolsBox.setAlignment(Pos.CENTER_LEFT);
+
+        Button btnEmrEntry = new Button("Open Thyroid EMR Entry");
+        btnEmrEntry.setStyle("-fx-font-size: 14px; -fx-background-color: #3498db; -fx-text-fill: white;");
+        btnEmrEntry.setOnAction(e -> ThyroidLauncher.openThyroidEmr());
+
+        Button btnPregnancy = new Button("Pregnancy & Thyroid Helper");
+        btnPregnancy.setStyle("-fx-font-size: 14px; -fx-background-color: #e74c3c; -fx-text-fill: white;");
+        btnPregnancy.setOnAction(e -> ThyroidLauncher.openThyroidPregnancy());
+
+        toolsBox.getChildren().addAll(btnEmrEntry, btnPregnancy);
+
+        contentBox.getChildren().addAll(toolsLabel, toolsBox, new Separator());
+        // ---------------------
 
         // Add categories and their items
         addCategory(contentBox, "1. HYPOTHYROIDISM", getHypothyroidismItems());

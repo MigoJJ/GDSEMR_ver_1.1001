@@ -40,6 +40,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import com.emr.gds.main.medication.MedicationCategory;
+import com.emr.gds.main.thyroid.ThyroidLauncher;
 
 import javax.swing.SwingUtilities;
 import java.io.IOException;
@@ -325,15 +326,19 @@ public class IttiaApp extends Application {
         Button vitalButton = new Button("Vital BP & HbA1c");
         vitalButton.setOnAction(e -> openVitalWindow());
         
+        // --- Diagnostic Tools (Accented) ---
         Button dexaButton = new Button("DEXA");
+        dexaButton.getStyleClass().add("button-accent");
         dexaButton.setOnAction(e -> {
             DexaRiskAssessmentApp.open();
         });
         
         Button ekgButton = new Button("EKG");
+        ekgButton.getStyleClass().add("button-accent");
         ekgButton.setOnAction(e -> EkgSimpleReportApp.open());
         
         Button cpaButton = new Button("Chest X-ray");
+        cpaButton.getStyleClass().add("button-accent");
         cpaButton.setOnAction(event -> {
             ChestXrayReviewStage chestPAWindow = new ChestXrayReviewStage(mainStage);
             chestPAWindow.show();
@@ -352,9 +357,10 @@ public class IttiaApp extends Application {
         topBar.getItems().addAll(
             new Separator(), templateButton,
             new Separator(), vitalButton,
-            new Separator(), dexaButton,
-            new Separator(), ekgButton,
-            new Separator(), cpaButton
+            new Separator(), categoryButton,
+            new Separator(), 
+            new Label("Diagnostics:"), // Group Label
+            dexaButton, ekgButton, cpaButton
         );
         return topBar;
     }
@@ -373,7 +379,7 @@ public class IttiaApp extends Application {
      */
     private GridPane buildCenterPanel() {
         GridPane centerPane = textAreaManager.buildCenterAreas();
-        centerPane.setStyle("-fx-background-color: linear-gradient(to bottom right, #FFFACD, #FAFAD2);");
+        centerPane.setStyle("-fx-background-color: linear-gradient(to bottom right, #fdfbf7, #fbf8f1);"); // Ecru gradient
         return centerPane;
     }
 
@@ -383,8 +389,9 @@ public class IttiaApp extends Application {
     private ToolBar buildBottomPanel() {
         try {
             ToolBar bottomBar = buttonAction.buildBottomBar();
-            
+
             Button categoryButton = new Button("Category");
+            categoryButton.getStyleClass().add("button-accent");
             categoryButton.setOnAction(e -> {
                 try {
                     new MedicationCategory().start(new Stage());
@@ -394,12 +401,18 @@ public class IttiaApp extends Application {
             });
 
             Button thyroidButton = new Button("Thyroid");
-            thyroidButton.setOnAction(e -> com.emr.gds.main.thyroid.ThyroidEntry.main(null));
+            thyroidButton.getStyleClass().add("button-accent");
+            thyroidButton.setOnAction(e -> ThyroidLauncher.openThyroidEmr());
+
+            Button thyroidPregButton = new Button("Thyroid Pregnancy");
+            thyroidPregButton.getStyleClass().add("button-accent");
+            thyroidPregButton.setOnAction(e -> ThyroidLauncher.openThyroidPregnancy());
             
             bottomBar.getItems().add(new Separator());
             bottomBar.getItems().add(categoryButton);
             bottomBar.getItems().add(new Separator());
             bottomBar.getItems().add(thyroidButton);
+            bottomBar.getItems().add(thyroidPregButton);
             
             return bottomBar;
         } catch (Exception e) {

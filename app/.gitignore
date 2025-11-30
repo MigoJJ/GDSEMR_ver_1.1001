@@ -1,4 +1,0 @@
-# Eclipse 관련 파일들
-# If you want to track only DBs under app/db
-!app/src/main/resources/*.db
-/build/

@@ -1,5 +1,6 @@
 package com.emr.gds.main.medication;
 
+import com.emr.gds.util.StageSizing;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -14,9 +15,7 @@ public class MedicationCategory extends Application {
         Parent root = loader.load();
         primaryStage.setTitle("EMR Medication Helper");
         primaryStage.setScene(new Scene(root));
-        primaryStage.setWidth(800);
-        primaryStage.setHeight(800);
-        primaryStage.centerOnScreen();
+        StageSizing.fitToScreen(primaryStage, 0.35, 0.85, 400, 600);
         primaryStage.show();
     }
 

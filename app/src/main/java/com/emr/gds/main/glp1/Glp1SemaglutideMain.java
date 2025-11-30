@@ -4,6 +4,7 @@ import com.emr.gds.input.IAIFxTextAreaManager;
 import com.emr.gds.input.IAIMain;
 import com.emr.gds.input.IAITextAreaManager;
 
+import com.emr.gds.util.StageSizing;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -83,9 +84,11 @@ public class Glp1SemaglutideMain extends Application {
         root.setCenter(medPane);
         root.setBottom(bottomPane);
 
-        Scene scene = new Scene(root, 900, 700);
+        Scene scene = new Scene(root);
         stage.setTitle("GLP-1RA (Semaglutide) - EMR Module Demo");
         stage.setScene(scene);
+        // Use a narrower width ratio (0.5) for this specific module
+        StageSizing.fitToScreen(stage, 0.5, 0.9);
         stage.show();
     }
 

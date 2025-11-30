@@ -27,6 +27,17 @@
     border-color: #334155;
 }
 
+.root.gradient-theme {
+    primary-color: #b45309; /* Warm amber */
+    primary-dark: #92400e;
+    secondary-color: #f97316; /* Orange accent */
+    background-color: linear-gradient(to bottom right, #fff7ed, #fff0d1);
+    surface-color: #fffaf3;
+    text-color: #1d2d44;
+    text-color-light: #0f172a;
+    border-color: #fcd34d;
+}
+
 /* Font Size Classes */
 .root.font-small { -fx-font-size: 13px; }
 .root.font-medium { -fx-font-size: 15px; }

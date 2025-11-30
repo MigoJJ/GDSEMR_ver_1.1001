@@ -1,7 +1,7 @@
 package com.emr.gds.soap.IMSFollowUp;
 
 import com.emr.gds.input.IAITextAreaManager;
-import com.emr.gds.main.IAMProblemAction;
+import com.emr.gds.main.custom_ui.IAMProblemAction;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;

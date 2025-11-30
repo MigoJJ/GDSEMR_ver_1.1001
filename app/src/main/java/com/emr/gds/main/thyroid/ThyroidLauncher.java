@@ -1,5 +1,6 @@
 package com.emr.gds.main.thyroid;
 
+import com.emr.gds.util.StageSizing;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
@@ -19,7 +20,8 @@ public final class ThyroidLauncher {
         ThyroidPane root = new ThyroidPane(entry);
         Stage stage = new Stage();
         stage.setTitle("Thyroid EMR");
-        stage.setScene(new Scene(root, 900, 650));
+        stage.setScene(new Scene(root));
+        StageSizing.fitToScreen(stage);
         stage.show();
     }
 
@@ -30,7 +32,9 @@ public final class ThyroidLauncher {
         ThyroidPregnancy root = new ThyroidPregnancy();
         Stage stage = new Stage();
         stage.setTitle("Thyroid Pregnancy");
-        stage.setScene(new Scene(root, 620, 720));
+        stage.setScene(new Scene(root));
+        // Reduced width to ~60% of screen (15% reduction from default 0.7)
+        StageSizing.fitToScreen(stage, 0.6, 0.9);
         stage.show();
     }
 }

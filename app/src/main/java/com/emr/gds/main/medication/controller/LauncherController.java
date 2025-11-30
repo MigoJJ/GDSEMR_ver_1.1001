@@ -1,6 +1,7 @@
 package com.emr.gds.main.medication.controller;
 
 import com.emr.gds.main.medication.db.DatabaseManager;
+import com.emr.gds.util.StageSizing;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -54,9 +55,9 @@ public class LauncherController {
             controller.setSelectedCategory(category);
 
             Stage stage = (Stage) categoryContainer.getScene().getWindow();
-            stage.setScene(new Scene(root, 1500, 720));
+            stage.setScene(new Scene(root));
             stage.setTitle("EMR Helper – " + category);
-            stage.centerOnScreen();
+            StageSizing.fitToScreen(stage, 0.8, 0.9, 1100, 700);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -64,6 +65,7 @@ public class LauncherController {
 
     @FXML
     private void onQuit() {
-        Platform.exit();
+        Stage stage = (Stage) categoryContainer.getScene().getWindow();
+        stage.close();
     }
 }

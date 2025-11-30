@@ -7,7 +7,7 @@
             fx:controller="com.emr.gds.main.medication.controller.MainController">
 
     <left>
-        <VBox style="-fx-background-color: #f8f8f8; -fx-padding: 10; -fx-spacing: 10;">
+        <VBox style="-fx-background-color: #f8f8f8; -fx-padding: 10; -fx-spacing: 10; -fx-pref-width: 350;">
             <Button text="Back to Menu" onAction="#backToLauncher" maxWidth="1.7976931348623157E308"/>
             <Separator/>
             <Label text="Selected Items:" style="-fx-font-weight: bold;"/>
@@ -36,7 +36,7 @@
     </center>
 
     <right>
-        <VBox fx:id="actionPanel" style="-fx-background-color: #f7f9fc; -fx-border-color: #dfe3eb; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 15; -fx-spacing: 12; -fx-pref-width: 340;">
+        <VBox fx:id="actionPanel" style="-fx-background-color: #f7f9fc; -fx-border-color: #dfe3eb; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 15; -fx-spacing: 12; -fx-pref-width: 350;">
             <Label text="Edit / Delete / Save" style="-fx-font-weight: bold;"/>
             <Label fx:id="selectionLabel" text="No medication selected" wrapText="true" style="-fx-text-fill: #444;"/>
             <Button fx:id="btnEdit" text="Edit" onAction="#editItem" disable="true" maxWidth="1.7976931348623157E308"/>

@@ -3,6 +3,7 @@ package com.emr.gds.main.medication.controller;
 import com.emr.gds.main.medication.db.DatabaseManager;
 import com.emr.gds.main.medication.model.MedicationItem;
 import com.emr.gds.main.medication.model.MedicationGroup;
+import com.emr.gds.util.StageSizing;
 import com.emr.gds.main.service.EmrBridgeService;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -297,13 +298,13 @@ public class MainController {
         Parent root = FXMLLoader.load(getClass().getResource("/com/emr/gds/main/medication/launcher.fxml"));
         Stage stage = (Stage) mainTabPane.getScene().getWindow();
         stage.setScene(new Scene(root));
-        stage.setWidth(1250);
-        stage.setHeight(600);
-        stage.setX(javafx.stage.Screen.getPrimary().getVisualBounds().getWidth() - 250);
-        stage.setY(0);
+        StageSizing.fitToScreen(stage, 0.35, 0.85, 400, 600);
     }
 
-    @FXML private void quitApp() { System.exit(0); }
+    @FXML private void quitApp() {
+        Stage stage = (Stage) mainTabPane.getScene().getWindow();
+        stage.close();
+    }
 
     private void selectTabByName(String name) {
         mainTabPane.getTabs().stream()

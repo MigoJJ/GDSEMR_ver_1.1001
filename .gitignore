@@ -1,12 +1,13 @@
 
 # --- 예외 허용 (GitHub에 올려야 하는 DB) ---
+src/main/resources/database/*.db
 !src/main/resources/database/abbreviations.db
 !src/main/resources/database/emr_templates.db
 !src/main/resources/database/prolist.db
-.gradle/
-.gradle-cache/
-.gradle-local/
-wrapper/dists/
+!app/src/main/resources/*.db
+
+# Gradle metadata
+**/.gradle/
 
 # Build outputs
 **/build/
@@ -15,3 +16,12 @@ wrapper/dists/
 # Local logs and helpers
 *.log
 .aider*
+
+# IDE and OS artifacts
+.DS_Store
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/

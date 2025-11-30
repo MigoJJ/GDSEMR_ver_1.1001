@@ -1,6 +1,6 @@
 package com.emr.gds.main.vaccine;
 
-import com.emr.gds.main.VaccineConstants;
+import com.emr.gds.main.vaccine.VaccineConstants;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;

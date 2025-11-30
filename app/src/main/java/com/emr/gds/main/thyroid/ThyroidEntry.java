@@ -3,6 +3,7 @@ package com.emr.gds.main.thyroid;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -28,6 +29,56 @@ public class ThyroidEntry implements Serializable {
         THYROIDITIS,
         GOITER,
         OTHER
+    }
+
+    public enum Symptom {
+        HYPER_NERVOUSNESS    ("\t[ ✔️ ] Nervousness, anxiety, and irritability\n"),
+        HYPER_PALPITATIONS   ("\t[ ✔️ ] Rapid or irregular heartbeat (palpitations)\n"),
+        HYPER_WEIGHT_LOSS    ("\t[ ✔️ ] Weight loss despite normal/increased appetite\n"),
+        HYPER_HEAT_INTOLERANCE("\t[ ✔️ ] Sensitivity to heat and increased sweating\n"),
+        HYPER_TREMORS        ("\t[ ✔️ ] Tremors (shaking hands) and muscle weakness\n"),
+        HYPER_INSOMNIA       ("\t[ ✔️ ] Difficulty sleeping (insomnia)\n"),
+        HYPER_BOWEL          ("\t[ ✔️ ] Frequent bowel movements\n"),
+        HYPER_MENSES_LIGHT   ("\t[ ✔️ ] Changes in menstrual cycles (lighter/less frequent)\n"),
+
+        HYPO_FATIGUE         ("\t[ ✔️ ] Fatigue and lethargy\n"),
+        HYPO_COLD            ("\t[ ✔️ ] Sensitivity to cold\n"),
+        HYPO_WEIGHT_GAIN     ("\t[ ✔️ ] Unexplained weight gain\n"),
+        HYPO_CONSTIPATION    ("\t[ ✔️ ] Constipation\n"),
+        HYPO_DRY_SKIN_HAIR   ("\t[ ✔️ ] Dry skin and thinning/brittle hair\n"),
+        HYPO_PUFFY_FACE      ("\t[ ✔️ ] Puffy face and hoarseness\n"),
+        HYPO_SLOWED_HEART    ("\t[ ✔️ ] Slowed heart rate\n"),
+        HYPO_DEPRESSION      ("\t[ ✔️ ] Depression and impaired memory\n"),
+        HYPO_HEAVY_MENSES    ("\t[ ✔️ ] Heavy or irregular menstrual periods\n"),
+
+        GENERAL_GOITER       ("\t[ ✔️ ] Goiter (enlarged thyroid gland) - can occur in both\n"),
+        GENERAL_NODULES      ("\t[ ✔️ ] Thyroid Nodules (lumps in neck)\n"),
+        GENERAL_EYE_PROBLEMS ("\t[ ✔️ ] Eye problems (bulging/redness) - specific to Graves' disease\n");
+
+
+        private final String label;
+
+        Symptom(String label) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    /**
+     * Utility items for symptom dropdowns in the UI.
+     */
+    public static String[] getSymptomDropdownItems() {
+        return Arrays.stream(Symptom.values())
+                .map(Symptom::getLabel)
+                .toArray(String[]::new);
     }
 
     public enum HypoEtiology {
@@ -58,6 +109,8 @@ public class ThyroidEntry implements Serializable {
     // Basic info
     private VisitType visitType;
     private List<MainCategory> categories = new ArrayList<>();
+    private List<Symptom> symptoms = new ArrayList<>();
+    private String symptomNegatives;
 
     // Hypo / Hyper details
     private HypoEtiology hypoEtiology;
@@ -130,6 +183,8 @@ public class ThyroidEntry implements Serializable {
     private ThyroidEntry(Builder builder) {
         this.visitType = builder.visitType;
         this.categories = builder.categories;
+        this.symptoms = builder.symptoms;
+        this.symptomNegatives = builder.symptomNegatives;
         this.hypoEtiology = builder.hypoEtiology;
         this.hypoOvert = builder.hypoOvert;
         this.hyperEtiology = builder.hyperEtiology;
@@ -183,6 +238,11 @@ public class ThyroidEntry implements Serializable {
 
     public List<MainCategory> getCategories() { return categories; }
     public void setCategories(List<MainCategory> categories) { this.categories = (categories != null) ? categories : new ArrayList<>(); }
+
+    public List<Symptom> getSymptoms() { return symptoms; }
+    public void setSymptoms(List<Symptom> symptoms) { this.symptoms = (symptoms != null) ? symptoms : new ArrayList<>(); }
+    public String getSymptomNegatives() { return symptomNegatives; }
+    public void setSymptomNegatives(String symptomNegatives) { this.symptomNegatives = symptomNegatives; }
 
     public HypoEtiology getHypoEtiology() { return hypoEtiology; }
     public void setHypoEtiology(HypoEtiology hypoEtiology) { this.hypoEtiology = hypoEtiology; }
@@ -379,6 +439,8 @@ public class ThyroidEntry implements Serializable {
     public static class Builder {
         private VisitType visitType;
         private List<MainCategory> categories = new ArrayList<>();
+        private List<Symptom> symptoms = new ArrayList<>();
+        private String symptomNegatives;
         private HypoEtiology hypoEtiology;
         private Boolean hypoOvert;
         private HyperEtiology hyperEtiology;
@@ -438,6 +500,23 @@ public class ThyroidEntry implements Serializable {
 
         public Builder categories(List<MainCategory> categories) {
             this.categories = (categories != null) ? categories : new ArrayList<>();
+            return this;
+        }
+
+        public Builder addSymptom(Symptom symptom) {
+            if (symptom != null) {
+                this.symptoms.add(symptom);
+            }
+            return this;
+        }
+
+        public Builder symptoms(List<Symptom> symptoms) {
+            this.symptoms = (symptoms != null) ? symptoms : new ArrayList<>();
+            return this;
+        }
+
+        public Builder symptomNegatives(String symptomNegatives) {
+            this.symptomNegatives = symptomNegatives;
             return this;
         }
 

@@ -1,7 +1,8 @@
 package com.emr.gds.main.vaccine;
 
-import com.emr.gds.main.VaccineSideEffect;
 import javafx.stage.Stage;
+import com.emr.gds.main.vaccine.VaccineSideEffect;
+import javafx.fxml.FXML;
 
 /**
  * Controller that connects VaccineView actions to VaccineService.

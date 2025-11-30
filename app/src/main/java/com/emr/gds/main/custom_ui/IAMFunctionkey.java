@@ -1,6 +1,10 @@
 package com.emr.gds.main.custom_ui;
 
 import com.emr.gds.IttiaApp;
+import com.emr.gds.main.medication.controller.MainController;
+import com.emr.gds.util.StageSizing;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -9,6 +13,7 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,18 +48,38 @@ public class IAMFunctionkey {
      * Initializes the default actions for all F1-F12 keys.
      */
     private void initializeFunctionKeyActions() {
-        functionKeyActions.put(KeyCode.F1, this::showHelp);
-        functionKeyActions.put(KeyCode.F2, this::quickInsertTemplate);
-        functionKeyActions.put(KeyCode.F3, this::findInCurrentArea);
-        functionKeyActions.put(KeyCode.F4, mainApp::openVitalWindow);
+        functionKeyActions.put(KeyCode.F1, () -> {
+            openEmrMedicationHelper("DM");
+            this.showHelp();
+        });
+        functionKeyActions.put(KeyCode.F2, () -> openEmrMedicationHelper("Cardiovascular"));
+        functionKeyActions.put(KeyCode.F3, () -> openEmrMedicationHelper("Hypercholesterolemia"));
+        functionKeyActions.put(KeyCode.F4, () -> openEmrMedicationHelper("Thyroid"));
         functionKeyActions.put(KeyCode.F5, this::refreshData);
         functionKeyActions.put(KeyCode.F6, mainApp::formatCurrentArea);
         functionKeyActions.put(KeyCode.F7, this::spellCheckCurrentArea);
         functionKeyActions.put(KeyCode.F8, this::toggleWordWrap);
         functionKeyActions.put(KeyCode.F9, this::saveCurrentState);
         functionKeyActions.put(KeyCode.F10, this::showAllShortcuts);
-        functionKeyActions.put(KeyCode.F11, this::toggleFullscreen);
-        functionKeyActions.put(KeyCode.F12, mainApp::copyAllToClipboard);
+        functionKeyActions.put(KeyCode.F11, mainApp::copyAllToClipboard);
+        functionKeyActions.put(KeyCode.F12, this::showHelp);
+    }
+
+    private void openEmrMedicationHelper(String category) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/emr/gds/main/medication/main.fxml"));
+            Parent root = loader.load();
+            MainController controller = loader.getController();
+            controller.setSelectedCategory(category);
+
+            Stage stage = new Stage();
+            stage.setTitle("EMR Helper – " + category);
+            stage.setScene(new Scene(root));
+            StageSizing.fitToScreen(stage, 0.8, 0.9, 1100, 700);
+            stage.show();
+        } catch (IOException ex) {
+            new Alert(Alert.AlertType.ERROR, "Unable to open EMR Helper: " + ex.getMessage()).showAndWait();
+        }
     }
 
     /**
@@ -141,18 +166,18 @@ public class IAMFunctionkey {
         return """
             Function Key Shortcuts:
 
-            F1  - Show this help dialog
-            F2  - Quick insert HPI template
-            F3  - Find in current text area (Not implemented)
-            F4  - Open Vital BP & HbA1c window
-            F5  - Refresh/Reload data (Not implemented)
+            F1  - Open EMR Helper (DM)
+            F2  - Open EMR Helper (Cardiovascular)
+            F3  - Open EMR Helper (Hypercholesterolemia)
+            F4  - Open EMR Helper (Thyroid)
+            F5  - Refresh/Reload data 
             F6  - Format current text area
-            F7  - Spell check current area (Not implemented)
+            F7  - Spell check current area 
             F8  - Toggle word wrap for all areas
-            F9  - Save current state (Not implemented)
+            F9  - Save current state 
             F10 - Show all keyboard shortcuts
-            F11 - Toggle fullscreen mode
-            F12 - Copy all content to clipboard
+            F11 - Copy all content to clipboard
+            F12 - Show this help dialog
             """;
     }
 

@@ -2,36 +2,94 @@ package com.emr.gds.main.medication.db;
 
 import com.emr.gds.main.medication.model.MedicationGroup;
 import com.emr.gds.main.medication.model.MedicationItem;
-import org.w3c.dom.*;
-import javax.xml.parsers.*;
-import javax.xml.transform.*;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import java.io.File;
-import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class DatabaseManager {
-    private static final String DEFAULT_DATA_FILE_NAME = "med_data_storage.xml";
-    private final String dataFileName;
+    private static final Logger LOGGER = Logger.getLogger(DatabaseManager.class.getName());
+    private static final String DEFAULT_DB_FILENAME = "med_data.db";
+    private final String dbFileName;
+    
     private boolean pendingChanges = false;
     private Map<String, List<MedicationGroup>> cachedData = null;
     private List<String> cachedCategories = null;
 
     public DatabaseManager() {
-        this(DEFAULT_DATA_FILE_NAME);
+        this(DEFAULT_DB_FILENAME);
     }
 
-    public DatabaseManager(String dataFileName) {
-        this.dataFileName = dataFileName;
+    public DatabaseManager(String dbFileName) {
+        this.dbFileName = dbFileName;
+        initializeDatabase();
+    }
+
+    private Path getDbPath() {
+        // Logic to find the app/db directory relative to project root
+        Path p = Paths.get("").toAbsolutePath();
+        while (p != null && !Files.exists(p.resolve("gradlew"))) {
+            p = p.getParent();
+        }
+        
+        if (p != null) {
+            Path appDb = p.resolve("app/db").resolve(dbFileName);
+            if (Files.exists(appDb)) return appDb;
+            
+            Path localDb = p.resolve("db").resolve(dbFileName);
+            if (Files.exists(localDb)) return localDb;
+
+            return appDb; // Default to app/db
+        }
+        return Paths.get("app/db").resolve(dbFileName);
+    }
+    
+    private String getConnectionString() {
+        return "jdbc:sqlite:" + getDbPath().toAbsolutePath().toString();
+    }
+
+    private void initializeDatabase() {
+        String url = getConnectionString();
+        try (Connection conn = DriverManager.getConnection(url)) {
+            if (conn != null) {
+                try (Statement stmt = conn.createStatement()) {
+                    // Create tables
+                    stmt.execute("CREATE TABLE IF NOT EXISTS categories (" +
+                                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                                 "name TEXT UNIQUE, " +
+                                 "display_order INTEGER)");
+
+                    stmt.execute("CREATE TABLE IF NOT EXISTS medication_groups (" +
+                                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                                 "category_id INTEGER, " +
+                                 "title TEXT, " +
+                                 "display_order INTEGER, " +
+                                 "FOREIGN KEY(category_id) REFERENCES categories(id))");
+
+                    stmt.execute("CREATE TABLE IF NOT EXISTS medication_items (" +
+                                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                                 "group_id INTEGER, " +
+                                 "text TEXT, " +
+                                 "display_order INTEGER, " +
+                                 "FOREIGN KEY(group_id) REFERENCES medication_groups(id))");
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.severe("Failed to initialize database at " + url + ": " + e.getMessage());
+        }
     }
 
     public void createTables() {
-        // Mock implementation
+        initializeDatabase();
     }
 
     public void ensureSeedData() {
-        // Mock implementation
+        // No longer seeding from XML. Data is expected to be in DB.
+        if (cachedData == null) {
+            loadData();
+        }
     }
 
     public List<String> getOrderedCategories() {
@@ -49,78 +107,56 @@ public class DatabaseManager {
     }
 
     private void loadData() {
-        cachedData = new HashMap<>();
+        cachedData = new LinkedHashMap<>();
         cachedCategories = new ArrayList<>();
-        
-        File externalFile = new File(this.dataFileName);
-        
-        if (externalFile.exists()) {
-            try {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document doc = builder.parse(externalFile);
-                parseDocument(doc);
-                return; // Loaded from file successfully
-            } catch (Exception e) {
-                System.err.println("Failed to load from " + this.dataFileName + ": " + e.getMessage());
-                // Fallback to resource
-            }
-        }
+        String url = getConnectionString();
 
-        try (InputStream is = getClass().getResourceAsStream("/com/emr/gds/main/medication/med_data.xml")) {
-            if (is == null) {
-                System.err.println("Could not find med_data.xml resource");
-                return;
+        try (Connection conn = DriverManager.getConnection(url)) {
+            // Load Categories
+            Map<Integer, String> catIdMap = new LinkedHashMap<>();
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id, name FROM categories ORDER BY display_order")) {
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    String name = rs.getString("name");
+                    cachedCategories.add(name);
+                    catIdMap.put(id, name);
+                }
             }
 
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document doc = builder.parse(is);
-            parseDocument(doc);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            // Fallback to empty if error
-            cachedCategories = new ArrayList<>();
-            cachedData = new HashMap<>();
-        }
-    }
-    
-    private void parseDocument(Document doc) {
-        doc.getDocumentElement().normalize();
-
-        NodeList catList = doc.getElementsByTagName("category");
-        for (int i = 0; i < catList.getLength(); i++) {
-            Node catNode = catList.item(i);
-            if (catNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element catElement = (Element) catNode;
-                String categoryName = catElement.getAttribute("name");
-                cachedCategories.add(categoryName);
-
+            // Load Groups and Items
+            for (Map.Entry<Integer, String> catEntry : catIdMap.entrySet()) {
+                int catId = catEntry.getKey();
+                String catName = catEntry.getValue();
                 List<MedicationGroup> groups = new ArrayList<>();
-                NodeList groupList = catElement.getElementsByTagName("group");
 
-                for (int j = 0; j < groupList.getLength(); j++) {
-                    Node groupNode = groupList.item(j);
-                    if (groupNode.getNodeType() == Node.ELEMENT_NODE) {
-                        Element groupElement = (Element) groupNode;
-                        String groupName = groupElement.getAttribute("name");
+                String groupSql = "SELECT id, title FROM medication_groups WHERE category_id = ? ORDER BY display_order";
+                try (PreparedStatement pstmt = conn.prepareStatement(groupSql)) {
+                    pstmt.setInt(1, catId);
+                    try (ResultSet rsGroup = pstmt.executeQuery()) {
+                        while (rsGroup.next()) {
+                            int groupId = rsGroup.getInt("id");
+                            String groupTitle = rsGroup.getString("title");
+                            List<MedicationItem> items = new ArrayList<>();
 
-                        List<MedicationItem> items = new ArrayList<>();
-                        NodeList itemList = groupElement.getElementsByTagName("item");
-
-                        for (int k = 0; k < itemList.getLength(); k++) {
-                            Node itemNode = itemList.item(k);
-                            if (itemNode.getNodeType() == Node.ELEMENT_NODE) {
-                                String itemText = itemNode.getTextContent().trim();
-                                items.add(new MedicationItem(itemText));
+                            String itemSql = "SELECT text FROM medication_items WHERE group_id = ? ORDER BY display_order";
+                            try (PreparedStatement pstmtItem = conn.prepareStatement(itemSql)) {
+                                pstmtItem.setInt(1, groupId);
+                                try (ResultSet rsItem = pstmtItem.executeQuery()) {
+                                    while (rsItem.next()) {
+                                        items.add(new MedicationItem(rsItem.getString("text")));
+                                    }
+                                }
                             }
+                            groups.add(new MedicationGroup(groupTitle, items));
                         }
-                        groups.add(new MedicationGroup(groupName, items));
                     }
                 }
-                cachedData.put(categoryName, groups);
+                cachedData.put(catName, groups);
             }
+
+        } catch (SQLException e) {
+            LOGGER.severe("Failed to load from DB (" + url + "): " + e.getMessage());
         }
     }
 
@@ -134,51 +170,73 @@ public class DatabaseManager {
 
     public void commitPending() {
         if (cachedCategories == null || cachedData == null) return;
+        saveToDb();
+        pendingChanges = false;
+        LOGGER.info("Changes saved to database.");
+    }
 
-        try {
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-            Document doc = docBuilder.newDocument();
-            Element rootElement = doc.createElement("medications");
-            doc.appendChild(rootElement);
-
-            for (String categoryName : cachedCategories) {
-                Element category = doc.createElement("category");
-                category.setAttribute("name", categoryName);
-                rootElement.appendChild(category);
+    private void saveToDb() {
+        String url = getConnectionString();
+        try (Connection conn = DriverManager.getConnection(url)) {
+            conn.setAutoCommit(false);
+            try (Statement stmt = conn.createStatement()) {
+                // Clear existing data (Full rewrite strategy)
+                stmt.executeUpdate("DELETE FROM medication_items");
+                stmt.executeUpdate("DELETE FROM medication_groups");
+                stmt.executeUpdate("DELETE FROM categories");
                 
-                List<MedicationGroup> groups = cachedData.get(categoryName);
-                if (groups != null) {
-                    for (MedicationGroup group : groups) {
-                        Element groupElem = doc.createElement("group");
-                        groupElem.setAttribute("name", group.title());
-                        category.appendChild(groupElem);
+                String insertCat = "INSERT INTO categories (name, display_order) VALUES (?, ?)";
+                String insertGroup = "INSERT INTO medication_groups (category_id, title, display_order) VALUES (?, ?, ?)";
+                String insertItem = "INSERT INTO medication_items (group_id, text, display_order) VALUES (?, ?, ?)";
+
+                try (PreparedStatement pstmtCat = conn.prepareStatement(insertCat, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement pstmtGroup = conn.prepareStatement(insertGroup, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement pstmtItem = conn.prepareStatement(insertItem)) {
+                    
+                    int catOrder = 0;
+                    for (String catName : cachedCategories) {
+                        pstmtCat.setString(1, catName);
+                        pstmtCat.setInt(2, catOrder++);
+                        pstmtCat.executeUpdate();
                         
-                        for (MedicationItem item : group.medications()) {
-                            Element itemElem = doc.createElement("item");
-                            itemElem.setTextContent(item.getText());
-                            groupElem.appendChild(itemElem);
+                        try (ResultSet rsCat = pstmtCat.getGeneratedKeys()) {
+                            if (rsCat.next()) {
+                                int catId = rsCat.getInt(1);
+                                List<MedicationGroup> groups = cachedData.get(catName);
+                                if (groups != null) {
+                                    int groupOrder = 0;
+                                    for (MedicationGroup group : groups) {
+                                        pstmtGroup.setInt(1, catId);
+                                        pstmtGroup.setString(2, group.title());
+                                        pstmtGroup.setInt(3, groupOrder++);
+                                        pstmtGroup.executeUpdate();
+                                        
+                                        try (ResultSet rsGroup = pstmtGroup.getGeneratedKeys()) {
+                                            if (rsGroup.next()) {
+                                                int groupId = rsGroup.getInt(1);
+                                                int itemOrder = 0;
+                                                for (MedicationItem item : group.medications()) {
+                                                    pstmtItem.setInt(1, groupId);
+                                                    pstmtItem.setString(2, item.getText());
+                                                    pstmtItem.setInt(3, itemOrder++);
+                                                    pstmtItem.addBatch();
+                                                }
+                                                pstmtItem.executeBatch();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
             }
-
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-            DOMSource source = new DOMSource(doc);
-            StreamResult result = new StreamResult(new File(this.dataFileName));
-
-            transformer.transform(source, result);
-
-            pendingChanges = false;
-            System.out.println("Changes saved to " + new File(this.dataFileName).getAbsolutePath());
-
-        } catch (ParserConfigurationException | TransformerException e) {
-            e.printStackTrace();
-            System.err.println("Failed to save changes: " + e.getMessage());
+        } catch (SQLException e) {
+            LOGGER.severe("Failed to save to DB: " + e.getMessage());
         }
     }
 
@@ -205,6 +263,29 @@ public class DatabaseManager {
                     return;
                 }
             }
+        }
+    }
+
+    public void addCategory(String categoryName) {
+        if (cachedCategories == null) cachedCategories = new ArrayList<>();
+        if (!cachedCategories.contains(categoryName)) {
+            cachedCategories.add(categoryName);
+            if (cachedData == null) cachedData = new LinkedHashMap<>();
+            cachedData.put(categoryName, new ArrayList<>());
+            markDirty();
+        }
+    }
+
+    public void addGroup(String categoryName, String groupName) {
+        if (cachedData == null) return;
+        List<MedicationGroup> groups = cachedData.get(categoryName);
+        if (groups != null) {
+            // Check if exists
+            for (MedicationGroup g : groups) {
+                if (g.title().equals(groupName)) return;
+            }
+            groups.add(new MedicationGroup(groupName, new ArrayList<>()));
+            markDirty();
         }
     }
 }

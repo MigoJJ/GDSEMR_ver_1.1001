@@ -27,14 +27,17 @@
         <BorderPane>
             <top>
                 <ToolBar style="-fx-background-color: linear-gradient(to bottom, #ffffff, #f8f9fa); -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0; -fx-padding: 10 15;">
-                    <Button text="🔍 Find" onAction="#findMedication" 
+                    <Button text="FIND" onAction="#findMedication" 
                             style="-fx-background-color: #007bff; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 16; -fx-background-radius: 6;"/>
                     <Separator/>
-                    <Button text="➕ Add" onAction="#addMedication" 
+                    <Button text="INSERT" onAction="#addMedication" 
                             style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 16; -fx-background-radius: 6;"/>
                     <Separator/>
-                    <Button text="❌ Quit" onAction="#quitApp" 
+                    <Button text="DELETE" onAction="#deleteItem" 
                             style="-fx-background-color: #dc3545; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 16; -fx-background-radius: 6;"/>
+                    <Separator/>
+                    <Button text="QUIT" onAction="#quitApp" 
+                            style="-fx-background-color: #6c757d; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 8 16; -fx-background-radius: 6;"/>
                 </ToolBar>
             </top>
             <center>

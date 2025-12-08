@@ -5,6 +5,8 @@ import com.emr.gds.main.medication.model.MedicationItem;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -12,25 +14,38 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class DatabaseManagerTest {
 
-    private static final String TEST_DATA_FILE = "test_med_data.xml";
+    private static final String TEST_DB_FILE = "test_med_data.db";
 
     @AfterEach
     void tearDown() {
-        File file = new File(TEST_DATA_FILE);
-        if (file.exists()) {
-            file.delete();
-        }
+        // Best effort cleanup
+        File file = new File("app/db/" + TEST_DB_FILE);
+        if (file.exists()) file.delete();
+        
+        File fileLocal = new File("db/" + TEST_DB_FILE);
+        if (fileLocal.exists()) fileLocal.delete();
+
+        File fileRoot = new File(TEST_DB_FILE);
+        if (fileRoot.exists()) fileRoot.delete();
     }
 
     @Test
     void testPersistence() {
         // 1. Initial Load with TEST file
-        DatabaseManager db1 = new DatabaseManager(TEST_DATA_FILE);
+        DatabaseManager db1 = new DatabaseManager(TEST_DB_FILE);
+        db1.createTables(); // Ensure tables exist
+        
+        // Seed Data since we don't load from XML anymore
+        String testCat = "Test Category";
+        String testGroup = "Test Group";
+        db1.addCategory(testCat);
+        db1.addGroup(testCat, testGroup);
+        
         Map<String, List<MedicationGroup>> data1 = db1.getMedicationData();
         assertNotNull(data1, "Data should be loaded");
-        assertFalse(data1.isEmpty(), "Data should not be empty (loaded from resource)");
+        assertFalse(data1.isEmpty(), "Data should not be empty after seeding");
         
-        // Pick a category to add to - check first key
+        // Pick a category to add to
         String category = db1.getOrderedCategories().get(0);
         List<MedicationGroup> catGroups = data1.get(category);
         String group = catGroups.get(0).title();
@@ -44,11 +59,8 @@ class DatabaseManagerTest {
         db1.commitPending();
         assertFalse(db1.hasPendingChanges(), "Should not have pending changes after commit");
         
-        File file = new File(TEST_DATA_FILE);
-        assertTrue(file.exists(), "Storage file should be created at " + file.getAbsolutePath());
-
         // 4. Reload (Simulate App Restart)
-        DatabaseManager db2 = new DatabaseManager(TEST_DATA_FILE);
+        DatabaseManager db2 = new DatabaseManager(TEST_DB_FILE);
         Map<String, List<MedicationGroup>> data2 = db2.getMedicationData();
         
         // 5. Verify

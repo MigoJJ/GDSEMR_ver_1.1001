@@ -588,7 +588,6 @@ public class IttiaApp extends Application {
     public void clearAllText() {
         textAreaManager.clearAllTextAreas();
         Optional.ofNullable(problemAction).ifPresent(IAMProblemAction::clearScratchpad);
-        showToast("All text cleared");
     }
 
     // ================================

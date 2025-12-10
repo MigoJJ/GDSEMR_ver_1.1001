@@ -173,6 +173,10 @@ public class ThyroidEntry implements Serializable {
     private String followUpInterval;
     private String followUpPlanText;
 
+    // Physical Exam Extra
+    private String goiterSize;
+    private String physicalExamNote;
+
     // Notes
     private String clinicianNote;
     private String problemListSummary;
@@ -227,6 +231,8 @@ public class ThyroidEntry implements Serializable {
         this.scanDate = builder.scanDate;
         this.followUpInterval = builder.followUpInterval;
         this.followUpPlanText = builder.followUpPlanText;
+        this.goiterSize = builder.goiterSize;
+        this.physicalExamNote = builder.physicalExamNote;
         this.clinicianNote = builder.clinicianNote;
         this.problemListSummary = builder.problemListSummary;
     }
@@ -370,6 +376,12 @@ public class ThyroidEntry implements Serializable {
     public String getFollowUpPlanText() { return followUpPlanText; }
     public void setFollowUpPlanText(String followUpPlanText) { this.followUpPlanText = followUpPlanText; }
 
+    public String getGoiterSize() { return goiterSize; }
+    public void setGoiterSize(String goiterSize) { this.goiterSize = goiterSize; }
+
+    public String getPhysicalExamNote() { return physicalExamNote; }
+    public void setPhysicalExamNote(String physicalExamNote) { this.physicalExamNote = physicalExamNote; }
+
     public String getClinicianNote() { return clinicianNote; }
     public void setClinicianNote(String clinicianNote) { this.clinicianNote = clinicianNote; }
 
@@ -483,6 +495,8 @@ public class ThyroidEntry implements Serializable {
         private LocalDate scanDate;
         private String followUpInterval;
         private String followUpPlanText;
+        private String goiterSize;
+        private String physicalExamNote;
         private String clinicianNote;
         private String problemListSummary;
 
@@ -727,6 +741,16 @@ public class ThyroidEntry implements Serializable {
 
         public Builder followUpPlanText(String followUpPlanText) {
             this.followUpPlanText = followUpPlanText;
+            return this;
+        }
+
+        public Builder goiterSize(String goiterSize) {
+            this.goiterSize = goiterSize;
+            return this;
+        }
+
+        public Builder physicalExamNote(String physicalExamNote) {
+            this.physicalExamNote = physicalExamNote;
             return this;
         }
 

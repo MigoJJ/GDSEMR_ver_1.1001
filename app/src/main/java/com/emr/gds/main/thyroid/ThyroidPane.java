@@ -69,6 +69,10 @@ public class ThyroidPane extends VBox {
     private final ComboBox<ThyroidEntry.VisitType> cmbVisitType = new ComboBox<>();
     private final TextField txtWeight = new TextField(); // Patient weight for dose calc
 
+    // Physical Exam Extra
+    private final TextField txtGoiterSize = new TextField();
+    private final TextArea txtPhysicalExamNote = new TextArea();
+
     private final CheckBox chkHypo = new CheckBox("Hypothyroidism");
     private final CheckBox chkHyper = new CheckBox("Hyperthyroidism");
     private final CheckBox chkNodule = new CheckBox("Thyroid nodule");
@@ -146,6 +150,11 @@ public class ThyroidPane extends VBox {
         cmbVisitType.setPromptText("Visit type...");
         txtWeight.setPromptText("Weight (kg)");
         txtWeight.setPrefWidth(80);
+
+        txtGoiterSize.setPromptText("Goiter size (cm)");
+        txtPhysicalExamNote.setPromptText("Physical Exam Notes");
+        txtPhysicalExamNote.setPrefRowCount(3);
+        txtPhysicalExamNote.setWrapText(true);
 
         cmbHypoEtiology.getItems().addAll(ThyroidEntry.HypoEtiology.values());
         cmbHypoEtiology.setPromptText("Hypo etiology...");
@@ -408,7 +417,19 @@ public class ThyroidPane extends VBox {
         split.setPadding(new Insets(10));
         split.setFillHeight(true);
 
-        return styledPane("4. Physical Exam", split);
+        VBox container = new VBox(10, split);
+        container.setPadding(new Insets(0, 0, 10, 0));
+
+        HBox goiterBox = new HBox(10, new Label("Goiter size:"), txtGoiterSize);
+        goiterBox.setAlignment(Pos.CENTER_LEFT);
+        goiterBox.setPadding(new Insets(0, 10, 0, 10));
+
+        VBox noteBox = new VBox(5, new Label("Physical Exam Notes:"), txtPhysicalExamNote);
+        noteBox.setPadding(new Insets(0, 10, 0, 10));
+        
+        container.getChildren().addAll(new Separator(), goiterBox, noteBox);
+
+        return styledPane("4. Physical Exam", container);
     }
 
     private TitledPane createLabsPane() {
@@ -670,6 +691,10 @@ public class ThyroidPane extends VBox {
         // Plan
         entry.setFollowUpInterval(cmbFollowUpInterval.getValue());
         entry.setFollowUpPlanText(txtFollowUpPlan.getText());
+
+        // Physical Exam
+        entry.setGoiterSize(emptyToNull(txtGoiterSize.getText()));
+        entry.setPhysicalExamNote(txtPhysicalExamNote.getText());
     }
 
     private String buildSpecialistSummary(ThyroidEntry e) {
@@ -815,10 +840,17 @@ public class ThyroidPane extends VBox {
         boolean anySelected = examSectionMap.values().stream()
                 .flatMap(List::stream)
                 .anyMatch(CheckBox::isSelected);
+        
+        String gSize = txtGoiterSize.getText().trim();
+        String pNote = txtPhysicalExamNote.getText().trim();
+        boolean hasExtra = !gSize.isEmpty() || !pNote.isEmpty();
 
-        if (anySelected) {
+        if (anySelected || hasExtra) {
             lines.add(EXAM_SEPARATOR);
             lines.add(EXAM_HEADER);
+            if (!gSize.isEmpty()) {
+                lines.add("     Goiter Size: [ " + gSize + " ] cc");
+            }
             for (var entry : examSectionMap.entrySet()) {
                 List<String> selected = entry.getValue().stream()
                         .filter(CheckBox::isSelected)
@@ -828,6 +860,9 @@ public class ThyroidPane extends VBox {
                     String label = EXAM_LABELS.getOrDefault(entry.getKey(), entry.getKey());
                     lines.add("     " + label + " :\t" + String.join("; ", selected));
                 }
+            }
+            if (!pNote.isEmpty()) {
+                lines.add("     Notes: " + pNote.replace("\n", "; "));
             }
             lines.add(EXAM_SEPARATOR);
         }

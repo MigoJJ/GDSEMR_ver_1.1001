@@ -289,7 +289,6 @@ public class MainController {
         }
         manager.get().focusArea(9);
         manager.get().insertBlockIntoFocusedArea(text + ".");
-        showAlert(Alert.AlertType.INFORMATION, "Success", "Saved to EMR comment field.");
     }
 
     @FXML private void clearOutput() { outputTextArea.clear(); }

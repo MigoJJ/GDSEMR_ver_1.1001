@@ -106,7 +106,8 @@ public class Glp1SemaglutidePane extends VBox {
         cmbBrand.getItems().setAll(
                 "Ozempic (semaglutide, SC weekly)",
                 "Wegovy (semaglutide, SC weekly)",
-                "Rybelsus (semaglutide, PO daily)"
+                "Rybelsus (semaglutide, PO daily)",
+                "Mounjaro (tirzepatide, SC weekly)"
         );
         cmbBrand.setPromptText("Select brand / route...");
         cmbBrand.setPrefWidth(260);
@@ -148,6 +149,16 @@ public class Glp1SemaglutidePane extends VBox {
                         "3 mg PO daily",
                         "7 mg PO daily",
                         "14 mg PO daily"
+                );
+            } else if (brand.startsWith("Mounjaro")) {
+                // Mounjaro (Tirzepatide): 2.5, 5, 7.5, 10, 12.5, 15 mg weekly
+                cmbDose.getItems().setAll(
+                        "2.5 mg weekly (initiation, 4 wks)",
+                        "5.0 mg weekly",
+                        "7.5 mg weekly",
+                        "10.0 mg weekly",
+                        "12.5 mg weekly",
+                        "15.0 mg weekly (max)"
                 );
             }
         });

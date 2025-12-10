@@ -60,8 +60,6 @@ public class Glp1SemaglutideMain extends Application {
                         if (!assessmentLine.isBlank()) {
                             manager.appendTextToSection(IAIFxTextAreaManager.AREA_A, assessmentLine + "\n");
                         }
-
-                        new Alert(Alert.AlertType.INFORMATION, "Saved to PI> and A> in EMR.").showAndWait();
                     },
                     () -> new Alert(
                             Alert.AlertType.ERROR,

@@ -1,9 +1,10 @@
 package com.emr.gds;
 
 import com.emr.gds.main.imaging.ChestXrayReviewStage;
-import com.emr.gds.main.bone.DexaRiskAssessmentApp;
 import com.emr.gds.main.ekg.EkgSimpleReportApp;
 import com.emr.gds.main.ekg.EkgQuickInterpreter;
+import com.emr.gds.main.allergy.AllergyApp;
+import com.emr.gds.main.bone.DexaRiskAssessmentApp;
 import com.emr.gds.input.IAIFreqFrame;
 import com.emr.gds.input.IAIFxTextAreaManager;
 import com.emr.gds.input.IAIMain;
@@ -414,6 +415,16 @@ public class IttiaApp extends Application {
             thyroidPregButton.getStyleClass().add("button-accent");
             thyroidPregButton.setOnAction(e -> ThyroidLauncher.openThyroidPregnancy());
 
+            Button allergyButton = new Button("Allergy");
+            allergyButton.getStyleClass().add("button-accent");
+            allergyButton.setOnAction(e -> {
+                try {
+                    new AllergyApp().start(new Stage());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
+
             Button labCodeButton = new Button("LabCode");
             labCodeButton.getStyleClass().add("button-accent");
             labCodeButton.setOnAction(e -> com.emr.gds.main.clinicalLab.ClinicalLabLauncher.open());
@@ -423,6 +434,8 @@ public class IttiaApp extends Application {
             bottomBar.getItems().add(new Separator());
             bottomBar.getItems().add(thyroidButton);
             bottomBar.getItems().add(thyroidPregButton);
+            bottomBar.getItems().add(new Separator());
+            bottomBar.getItems().add(allergyButton);
             bottomBar.getItems().add(new Separator());
             bottomBar.getItems().add(labCodeButton);
             

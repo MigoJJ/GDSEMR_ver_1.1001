@@ -4,37 +4,55 @@ import com.emr.gds.main.allergy.model.AllergyCause;
 import com.emr.gds.main.allergy.model.SymptomItem;
 import com.emr.gds.main.allergy.service.AllergyDataService;
 import com.emr.gds.main.allergy.view.AllergyView;
-import javafx.beans.binding.Bindings;
+import com.emr.gds.main.service.EmrBridgeService;
+import com.emr.gds.input.IAITextAreaManager;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableSet;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.stage.Stage;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class AllergyController {
 
     private final AllergyView view;
     private final AllergyDataService dataService;
+    private final EmrBridgeService emrBridgeService;
     private final String currentDate;
+    private final ObservableSet<String> selectedCauses = FXCollections.observableSet(new LinkedHashSet<>());
+    private final ObservableList<SymptomItem> symptoms;
+    private final FilteredList<SymptomItem> filteredSymptoms;
+    private TemplateMode templateMode = TemplateMode.DEFAULT;
+
+    private enum TemplateMode {
+        DEFAULT,
+        DENY_ALL,
+        ANAPHYLAXIS_DENIED
+    }
 
     public AllergyController() {
         this.view = new AllergyView();
         this.dataService = new AllergyDataService();
+        this.emrBridgeService = new EmrBridgeService();
         this.currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        this.symptoms = FXCollections.observableArrayList(dataService.getSymptomItems());
+        this.filteredSymptoms = new FilteredList<>(symptoms, s -> true);
 
         setupSymptomTable();
         setupBindings();
@@ -55,47 +73,50 @@ public class AllergyController {
         view.getAnaDeniedTemplateMenuItem().setOnAction(e -> denyAnaphylaxisOnly());
 
         // Button Actions
-        view.getClearOutputButton().setOnAction(e -> view.getOutputArea().clear());
+        view.getClearOutputButton().setOnAction(e -> clearAllData());
         view.getCopyClipboardButton().setOnAction(e -> copyToClipboard());
+        view.getSaveEmrButton().setOnAction(e -> saveToEmr());
+        view.getQuitButton().setOnAction(e -> closeWindow());
 
         // Search Field
         view.getSearchField().textProperty().addListener((obs, old, newVal) -> filterSymptoms(newVal));
-
-        // Symptom selection count
-        view.getCountLabel().textProperty().bind(Bindings.createStringBinding(
-                () -> "Selected: " + countSelectedSymptoms(),
-                Bindings.size(view.getSymptomTreeTable().getRoot().getChildren())
-        ));
     }
 
     private void setupSymptomTable() {
-        TreeItem<SymptomItem> root = new TreeItem<>(new SymptomItem("Root", "", false));
-        root.setExpanded(true);
+        TableColumn<SymptomItem, String> categoryCol = new TableColumn<>("Category");
+        categoryCol.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getCategory()));
+        categoryCol.setPrefWidth(220);
 
-        Map<String, TreeItem<SymptomItem>> categories = new HashMap<>();
-        dataService.getSymptomItems().forEach(item -> {
-            categories.computeIfAbsent(item.getCategory(), cat -> {
-                TreeItem<SymptomItem> catItem = new TreeItem<>(new SymptomItem(cat, "", false));
-                catItem.setExpanded(true);
-                root.getChildren().add(catItem);
-                return catItem;
-            }).getChildren().add(new TreeItem<>(item));
+        TableColumn<SymptomItem, String> symptomCol = new TableColumn<>("Symptom");
+        symptomCol.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getSymptom()));
+        symptomCol.setPrefWidth(480);
+
+        SortedList<SymptomItem> sortedSymptoms = new SortedList<>(filteredSymptoms);
+        sortedSymptoms.comparatorProperty().bind(view.getSymptomTable().comparatorProperty());
+
+        view.getSymptomTable().getColumns().setAll(categoryCol, symptomCol);
+        view.getSymptomTable().setItems(sortedSymptoms);
+        view.getSymptomTable().setRowFactory(tv -> createSymptomRow());
+    }
+
+    private TableRow<SymptomItem> createSymptomRow() {
+        TableRow<SymptomItem> row = new TableRow<>();
+
+        row.setOnMouseClicked(e -> {
+            if (!row.isEmpty()) {
+                SymptomItem item = row.getItem();
+                item.setSelected(!item.isSelected());
+                renderNote();
+                updateRowHighlight(row, item);
+            }
         });
 
-        TreeTableColumn<SymptomItem, Boolean> checkCol = new TreeTableColumn<>("");
-        checkCol.setPrefWidth(40);
-        checkCol.setCellValueFactory(param -> param.getValue().getValue().selectedProperty().asObject());
-        checkCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(checkCol));
+        row.itemProperty().addListener((obs, oldItem, newItem) -> updateRowHighlight(row, newItem));
+        return row;
+    }
 
-        TreeTableColumn<SymptomItem, String> symptomCol = new TreeTableColumn<>("Symptom");
-        symptomCol.setPrefWidth(500);
-        symptomCol.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue().getSymptom()));
-
-        view.getSymptomTreeTable().setRoot(root);
-        view.getSymptomTreeTable().getColumns().addAll(checkCol, symptomCol);
-        view.getSymptomTreeTable().setOnMouseClicked(e -> updateOutputFromSelection());
-
-        addRecursiveListener(root);
+    private void updateRowHighlight(TableRow<SymptomItem> row, SymptomItem item) {
+        row.setStyle((item != null && item.isSelected()) ? "-fx-background-color: #e8f6ff;" : "");
     }
 
     private void setupCauseTable() {
@@ -108,139 +129,132 @@ public class AllergyController {
             TableRow<AllergyCause> row = new TableRow<>();
             row.setOnMouseClicked(e -> {
                 if (!row.isEmpty() && e.getClickCount() == 1) {
-                    view.getOutputArea().appendText("*** Allergic to: " + row.getItem().getName() + "\n");
-                    scrollToBottom();
+                    toggleCause(row.getItem().getName());
                 }
             });
             return row;
         });
     }
 
-    private void addRecursiveListener(TreeItem<SymptomItem> item) {
-        if (item.getValue() != null) {
-            item.getValue().selectedProperty().addListener((obs, was, is) -> updateOutputFromSelection());
-        }
-        item.getChildren().forEach(this::addRecursiveListener);
-    }
+    private void renderNote() {
+        List<SymptomItem> selectedSymptoms = symptoms.stream()
+                .filter(SymptomItem::isSelected)
+                .toList();
 
-    private void updateOutputFromSelection() {
-        Set<String> selectedSymptoms = new HashSet<>();
-        collectSelected(view.getSymptomTreeTable().getRoot(), selectedSymptoms);
+        StringBuilder builder = new StringBuilder();
+        builder.append("▣ Allergy History (").append(currentDate).append(")\n\n");
 
-        String newSymptomBlock;
-        if (selectedSymptoms.isEmpty()) {
-            newSymptomBlock = "▣ No allergy symptoms reported.\n\n";
+        if (templateMode == TemplateMode.DENY_ALL) {
+            builder.append("""
+                    Patient explicitly denies ALL allergic symptoms including:
+                    • Skin reactions, swelling, respiratory distress
+                    • Gastrointestinal symptoms
+                    • Anaphylactic symptoms (airway, BP, consciousness)
+
+                    No known drug/food/environmental allergies at this time.
+
+                    """);
         } else {
-            newSymptomBlock = "▣ Reported Symptoms:\n" +
-                    selectedSymptoms.stream()
-                            .map(s -> " • " + s)
-                            .collect(Collectors.joining("\n")) + "\n\n";
-        }
+            appendKnownAllergiesSection(builder);
+            appendSymptomsSection(selectedSymptoms, builder);
 
-        String existingText = view.getOutputArea().getText();
-        String reportedHeader = "▣ Reported Symptoms:";
-        String noSymptomsMessage = "▣ No allergy symptoms reported.";
-
-        int blockStartIndex = existingText.indexOf(reportedHeader);
-        if (blockStartIndex == -1) {
-            blockStartIndex = existingText.indexOf(noSymptomsMessage);
-        }
-
-        if (blockStartIndex != -1) {
-            // Find the end of the block, which is a double newline
-            int blockEndIndex = existingText.indexOf("\n\n", blockStartIndex);
-            if (blockEndIndex != -1) {
-                String before = existingText.substring(0, blockStartIndex);
-                String after = existingText.substring(blockEndIndex + 2); // Length of "\n\n"
-                view.getOutputArea().setText(before + newSymptomBlock + after);
-            } else {
-                // Block start found, but not end. Assume it goes to the end of the text.
-                String before = existingText.substring(0, blockStartIndex);
-                view.getOutputArea().setText(before + newSymptomBlock);
-            }
-        } else {
-            // No existing symptom block found, so we insert it intelligently
-            String historyHeader = "▣ Allergy History";
-            int headerIndex = existingText.indexOf(historyHeader);
-            if (headerIndex != -1) {
-                int insertAfterIndex = existingText.indexOf("\n\n", headerIndex);
-                if (insertAfterIndex != -1) {
-                    String before = existingText.substring(0, insertAfterIndex + 2);
-                    String after = existingText.substring(insertAfterIndex + 2);
-
-                    // Clean up common template lines from the 'after' part to prevent duplication
-                    String cleanedAfter = after.replaceAll("(?m)^▣ .+\\R?", "")
-                                               .replaceAll("(?m)^Patient explicitly denies .+\\R?", "")
-                                               .replaceAll("(?m)^• .+\\R?", "")
-                                               .replaceAll("(?m)^No known .+\\R?", "");
-
-                    view.getOutputArea().setText(before + newSymptomBlock + cleanedAfter.trim());
-                } else {
-                    // If no double newline after header, just append after a single newline
-                    view.getOutputArea().appendText("\n" + newSymptomBlock);
-                }
-            } else {
-                // If no header at all, prepend the new block to the existing text
-                view.getOutputArea().setText(newSymptomBlock + existingText);
+            if (templateMode == TemplateMode.ANAPHYLAXIS_DENIED) {
+                builder.append("▣ Patient specifically denies any history of anaphylaxis or life-threatening reactions.\n\n");
             }
         }
+
+        view.getOutputArea().setText(builder.toString());
+        updateSelectedCount(selectedSymptoms.size());
         scrollToBottom();
+        view.getSymptomTable().refresh();
     }
 
-    private void collectSelected(TreeItem<SymptomItem> node, Set<String> result) {
-        if (node.getValue() != null && node.getValue().isSelected() && !node.getValue().getSymptom().isEmpty()) {
-            result.add(node.getValue().getCategory() + " → " + node.getValue().getSymptom());
+    private void appendKnownAllergiesSection(StringBuilder builder) {
+        if (selectedCauses.isEmpty()) {
+            builder.append("▣ Known Allergies: None reported as of ").append(currentDate).append("\n");
+            builder.append("▣ No known drug, food, or environmental allergies.\n\n");
+        } else {
+            builder.append("*** Documented Allergens / Triggers:***\n");
+            selectedCauses.forEach(cause -> builder.append(" • ").append(cause).append("\n"));
+            builder.append("\n");
         }
-        node.getChildren().forEach(child -> collectSelected(child, result));
     }
 
-    private int countSelectedSymptoms() {
-        Set<String> selected = new HashSet<>();
-        collectSelected(view.getSymptomTreeTable().getRoot(), selected);
-        return selected.size();
+    private void appendSymptomsSection(List<SymptomItem> selectedSymptoms, StringBuilder builder) {
+        if (selectedSymptoms.isEmpty()) {
+            return;
+        }
+
+        Map<String, List<String>> grouped = new LinkedHashMap<>();
+        selectedSymptoms.forEach(item -> grouped
+                .computeIfAbsent(item.getCategory(), k -> new ArrayList<>())
+                .add(item.getSymptom()));
+
+        builder.append("< Reported Symptoms >:\n");
+        grouped.forEach((category, symptoms) -> builder
+                .append(" • ")
+                .append(category)
+                .append(": ")
+                .append(String.join(", ", symptoms))
+                .append("\n"));
+        builder.append("\n");
     }
 
     private void filterSymptoms(String query) {
         String lowerQuery = (query == null) ? "" : query.toLowerCase();
-        view.getSymptomTreeTable().getRoot().getChildren().forEach(categoryItem -> {
-            boolean matches = categoryItem.getChildren().stream()
-                    .anyMatch(symptomItem -> symptomItem.getValue().getSymptom().toLowerCase().contains(lowerQuery));
-            categoryItem.setExpanded(matches || lowerQuery.isEmpty());
-        });
+        filteredSymptoms.setPredicate(item -> lowerQuery.isEmpty()
+                || item.getSymptom().toLowerCase().contains(lowerQuery)
+                || item.getCategory().toLowerCase().contains(lowerQuery));
     }
 
     private void resetToDefault() {
         uncheckAll();
-        view.getOutputArea().setText(getDefaultTemplate());
+        selectedCauses.clear();
+        templateMode = TemplateMode.DEFAULT;
+        renderNote();
     }
 
     private void denyAllSymptoms() {
         uncheckAll();
-        view.getOutputArea().setText(getDenyAllTemplate());
+        selectedCauses.clear();
+        templateMode = TemplateMode.DENY_ALL;
+        renderNote();
     }
 
     private void denyAnaphylaxisOnly() {
-        traverseAndSetIf(view.getSymptomTreeTable().getRoot(), SymptomItem::isAnaphylaxis, false);
-        view.getOutputArea().appendText("\n▣ Patient specifically denies any history of anaphylaxis or life-threatening reactions.\n");
-        updateOutputFromSelection();
+        symptoms.stream()
+                .filter(SymptomItem::isAnaphylaxis)
+                .forEach(item -> item.setSelected(false));
+        selectedCauses.clear();
+        templateMode = TemplateMode.ANAPHYLAXIS_DENIED;
+        renderNote();
     }
 
     private void uncheckAll() {
-        traverseAndSet(view.getSymptomTreeTable().getRoot(), false);
+        symptoms.forEach(item -> item.setSelected(false));
+        view.getSymptomTable().refresh();
     }
 
-    private void traverseAndSet(TreeItem<SymptomItem> node, boolean value) {
-        if (node.getValue() != null && !node.getValue().getSymptom().isEmpty()) {
-            node.getValue().setSelected(value);
-        }
-        node.getChildren().forEach(child -> traverseAndSet(child, value));
+    private void clearAllData() {
+        uncheckAll();
+        selectedCauses.clear();
+        templateMode = TemplateMode.DEFAULT;
+        view.getOutputArea().clear();
+        updateSelectedCount(0);
     }
 
-    private void traverseAndSetIf(TreeItem<SymptomItem> node, Predicate<SymptomItem> predicate, boolean value) {
-        if (node.getValue() != null && predicate.test(node.getValue())) {
-            node.getValue().setSelected(value);
+    private void toggleCause(String name) {
+        if (selectedCauses.contains(name)) {
+            selectedCauses.remove(name);
+        } else {
+            selectedCauses.add(name);
         }
-        node.getChildren().forEach(child -> traverseAndSetIf(child, predicate, value));
+        templateMode = TemplateMode.DEFAULT;
+        renderNote();
+    }
+
+    private void updateSelectedCount(int symptomCount) {
+        view.getCountLabel().setText("Selected: " + symptomCount + " symptoms • " + selectedCauses.size() + " allergen(s)");
     }
 
     private void copyToClipboard() {
@@ -248,6 +262,26 @@ public class AllergyController {
         content.putString(view.getOutputArea().getText());
         Clipboard.getSystemClipboard().setContent(content);
         showAlert("Copied!", "Allergy note copied to clipboard.");
+    }
+
+    private void saveToEmr() {
+        String note = view.getOutputArea().getText().trim();
+        if (note.isEmpty()) {
+            showAlert("Nothing to Save", "Generate the note before saving to EMR.");
+            return;
+        }
+
+        boolean saved = emrBridgeService.insertBlock(IAITextAreaManager.AREA_PMH, note);
+        if (!saved) {
+            showAlert("Save Failed", "EMR is not available. Open the main EMR first.");
+        }
+    }
+
+    private void closeWindow() {
+        Stage stage = (Stage) view.getQuitButton().getScene().getWindow();
+        if (stage != null) {
+            stage.close();
+        }
     }
 
     private void showAlert(String title, String msg) {
@@ -258,33 +292,5 @@ public class AllergyController {
 
     private void scrollToBottom() {
         view.getOutputArea().setScrollTop(Double.MAX_VALUE);
-    }
-
-    // --- Text Templates ---
-
-    private String getDefaultTemplate() {
-        return String.format("""
-            ▣ Allergy History (%s)
-
-            ▣ Known Allergies: None reported as of %s
-            ▣ Patient denies any history of anaphylaxis.
-            ▣ No known drug, food, or environmental allergies.
-
-            --------------------------------------------------
-            Detailed symptom assessment performed.
-            """, currentDate, currentDate);
-    }
-
-    private String getDenyAllTemplate() {
-        return String.format("""
-            ▣ Allergy History (%s)
-
-            Patient explicitly denies ALL allergic symptoms including:
-            • Skin reactions, swelling, respiratory distress
-            • Gastrointestinal symptoms
-            • Anaphylactic symptoms (airway, BP, consciousness)
-
-            No known drug/food/environmental allergies at this time.
-            """, currentDate);
     }
 }

@@ -12,12 +12,9 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -35,11 +32,13 @@ public class AllergyView extends BorderPane {
     private final MenuItem allDeniedTemplateMenuItem;
     private final MenuItem anaDeniedTemplateMenuItem;
     private final TextField searchField;
-    private final TreeTableView<SymptomItem> symptomTreeTable;
+    private final TableView<SymptomItem> symptomTable;
     private final TableView<AllergyCause> causeTable;
     private final TextArea outputArea;
     private final Button clearOutputButton;
     private final Button copyClipboardButton;
+    private final Button saveEmrButton;
+    private final Button quitButton;
     private final Label statusLabel;
     private final Label countLabel;
 
@@ -62,19 +61,18 @@ public class AllergyView extends BorderPane {
         title.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
         searchField = new TextField();
         searchField.setPromptText("Search symptoms...");
-        symptomTreeTable = new TreeTableView<>();
-        symptomTreeTable.setShowRoot(false);
-        symptomTreeTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
-        VBox leftPanel = new VBox(10, title, searchField, symptomTreeTable);
+        symptomTable = new TableView<>();
+        symptomTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        VBox leftPanel = new VBox(10, title, searchField, symptomTable);
         leftPanel.setPadding(new Insets(10));
-        leftPanel.setPrefWidth(750);
-        VBox.setVgrow(symptomTreeTable, Priority.ALWAYS);
+        leftPanel.setPrefWidth(680);
+        VBox.setVgrow(symptomTable, Priority.ALWAYS);
 
         // --- Right Panel ---
         Label causeLabel = new Label("Common Allergy Causes (Click to add)");
         causeLabel.setStyle("-fx-font-weight: bold;");
         causeTable = new TableView<>();
-        causeTable.setPrefWidth(280);
+        causeTable.setPrefWidth(340);
         Label outputLabel = new Label("Final Note Output");
         outputLabel.setStyle("-fx-font-weight: bold;");
         outputArea = new TextArea();
@@ -83,7 +81,9 @@ public class AllergyView extends BorderPane {
         outputArea.setStyle("-fx-font-family: 'Consolas'; -fx-font-size: 13;");
         clearOutputButton = new Button("Clear Output");
         copyClipboardButton = new Button("Copy to Clipboard");
-        HBox buttonBox = new HBox(10, clearOutputButton, copyClipboardButton);
+        saveEmrButton = new Button("Save to EMR");
+        quitButton = new Button("Quit");
+        HBox buttonBox = new HBox(10, clearOutputButton, copyClipboardButton, saveEmrButton, quitButton);
         buttonBox.setAlignment(Pos.CENTER_RIGHT);
         VBox rightPanel = new VBox(10, causeLabel, causeTable, new Separator(), outputLabel, outputArea, buttonBox);
         rightPanel.setPadding(new Insets(10));
@@ -93,7 +93,7 @@ public class AllergyView extends BorderPane {
 
         // --- Split Pane ---
         SplitPane splitPane = new SplitPane(leftPanel, rightPanel);
-        splitPane.setDividerPositions(0.65, 0.35);
+        splitPane.setDividerPositions(0.58, 0.42);
 
         // --- Status Bar ---
         statusLabel = new Label("Ready • " + LocalDate.now());
@@ -136,8 +136,8 @@ public class AllergyView extends BorderPane {
         return searchField;
     }
 
-    public TreeTableView<SymptomItem> getSymptomTreeTable() {
-        return symptomTreeTable;
+    public TableView<SymptomItem> getSymptomTable() {
+        return symptomTable;
     }
 
     public TableView<AllergyCause> getCauseTable() {
@@ -154,6 +154,14 @@ public class AllergyView extends BorderPane {
 
     public Button getCopyClipboardButton() {
         return copyClipboardButton;
+    }
+
+    public Button getSaveEmrButton() {
+        return saveEmrButton;
+    }
+
+    public Button getQuitButton() {
+        return quitButton;
     }
 
     public Label getCountLabel() {

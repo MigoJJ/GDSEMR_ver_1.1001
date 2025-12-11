@@ -524,14 +524,8 @@ public class EMRPMH extends Application {
     }
 
     private void openEMRFMH() {
-        javax.swing.SwingUtilities.invokeLater(() -> {
-            try {
-                // Assuming EMRFMH is a Swing JFrame
-                new EMRFMH(textAreaManager, abbrevMap).setVisible(true); // Example instantiation
-            } catch (Throwable t) {
-                showError("Unable to open EMRFMH", t);
-            }
-        });
+        // Use the new JavaFX Stage
+        com.emr.gds.main.history.FamilyHistoryStage.open(textAreaManager, abbrevMap);
     }
 
     private void showError(String header, Throwable t) {

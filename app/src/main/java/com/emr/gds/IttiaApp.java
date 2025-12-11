@@ -1,6 +1,7 @@
 package com.emr.gds;
 
 import com.emr.gds.main.imaging.ChestXrayReviewStage;
+import com.emr.gds.main.ekg.EkgReportStage;
 import com.emr.gds.main.ekg.EkgSimpleReportApp;
 import com.emr.gds.main.ekg.EkgQuickInterpreter;
 import com.emr.gds.main.allergy.AllergyApp;
@@ -43,8 +44,6 @@ import javafx.stage.Stage;
 
 import com.emr.gds.main.medication.MedicationCategory;
 import com.emr.gds.main.thyroid.ThyroidLauncher;
-
-import javax.swing.SwingUtilities;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -338,7 +337,7 @@ public class IttiaApp extends Application {
         
         Button ekgButton = new Button("EKG");
         ekgButton.getStyleClass().add("button-accent");
-        ekgButton.setOnAction(e -> EkgSimpleReportApp.open());
+        ekgButton.setOnAction(e -> EkgReportStage.open());
         
         Button ekgQuickButton = new Button("EKG Quick");
         ekgQuickButton.getStyleClass().add("button-accent");
@@ -478,14 +477,9 @@ public class IttiaApp extends Application {
      * Opens the EMR template editor.
      */
     private void openTemplateEditor() {
-        SwingUtilities.invokeLater(() -> {
-            // The editor runs in the Swing EDT
-            IAFMainEdit editor = new IAFMainEdit(templateContent ->
-                // When a template is selected, update the JavaFX UI on the FX Application Thread
-                Platform.runLater(() -> textAreaManager.parseAndAppendTemplate(templateContent))
-            );
-            editor.setVisible(true);
-        });
+        com.emr.gds.main.template.TemplateEditStage.open(templateContent ->
+            textAreaManager.parseAndAppendTemplate(templateContent)
+        );
     }
 
     // ================================

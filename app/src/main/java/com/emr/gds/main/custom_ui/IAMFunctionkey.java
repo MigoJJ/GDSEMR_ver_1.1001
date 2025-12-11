@@ -1,6 +1,8 @@
 package com.emr.gds.main.custom_ui;
 
 import com.emr.gds.IttiaApp;
+import com.emr.gds.input.IAIMain;
+import com.emr.gds.input.IAITextAreaManager;
 import com.emr.gds.main.medication.controller.MainController;
 import com.emr.gds.util.StageSizing;
 import javafx.fxml.FXMLLoader;
@@ -59,10 +61,10 @@ public class IAMFunctionkey {
         functionKeyActions.put(KeyCode.F6, mainApp::formatCurrentArea);
         functionKeyActions.put(KeyCode.F7, this::spellCheckCurrentArea);
         functionKeyActions.put(KeyCode.F8, this::toggleWordWrap);
-        functionKeyActions.put(KeyCode.F9, this::saveCurrentState);
-        functionKeyActions.put(KeyCode.F10, this::showAllShortcuts);
-        functionKeyActions.put(KeyCode.F11, mainApp::copyAllToClipboard);
-        functionKeyActions.put(KeyCode.F12, this::showHelp);
+        functionKeyActions.put(KeyCode.F9, () -> appendPlanFollowUp(1));
+        functionKeyActions.put(KeyCode.F10, () -> appendPlanFollowUp(2));
+        functionKeyActions.put(KeyCode.F11, () -> appendPlanFollowUp(3));
+        functionKeyActions.put(KeyCode.F12, mainApp::clearAllText);
     }
 
     private void openEmrMedicationHelper(String category) {
@@ -174,10 +176,10 @@ public class IAMFunctionkey {
             F6  - Format current text area
             F7  - Spell check current area 
             F8  - Toggle word wrap for all areas
-            F9  - Save current state 
-            F10 - Show all keyboard shortcuts
-            F11 - Copy all content to clipboard
-            F12 - Show this help dialog
+            F9  - Append 1-month F/U plan to P>
+            F10 - Append 2-month F/U plan to P>
+            F11 - Append 3-month F/U plan to P>
+            F12 - Clear all text (CE)
             """;
     }
 
@@ -217,6 +219,20 @@ public class IAMFunctionkey {
         alert.setTitle(title);
         alert.setResizable(true);
         alert.showAndWait();
+    }
+
+    /**
+     * Appends a follow-up plan line to the Plan (P>) text area.
+     */
+    private void appendPlanFollowUp(int months) {
+        IAIMain.getManagerSafely().ifPresentOrElse(manager -> {
+            String text = String.format(
+                    "- F/U in  [ %d ] month%s\n  ⓜ [ → ] advised the patient to continue with current medication",
+                    months,
+                    months == 1 ? "" : "s"
+            );
+            manager.appendTextToSection(IAITextAreaManager.AREA_P, text);
+        }, () -> showErrorDialog("Plan Insert Error", "Text areas are not ready yet. Please try again shortly."));
     }
 
     // ================================

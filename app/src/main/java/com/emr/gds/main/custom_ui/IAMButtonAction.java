@@ -284,38 +284,38 @@ public class IAMButtonAction {
     private Button createKCD9Button(String title) {
         Button b = new Button(title);
         b.setOnAction(e -> {
-            try {
-                // Check if the manager or its stage is null, or if the stage has been closed
-                if (kcdDatabaseManager == null || kcdStage == null || !kcdStage.isShowing()) {
-                    // If it's the first time, or the previous stage was truly closed
-                    kcdDatabaseManager = new KCDDatabaseManagerJavaFX();
-                    kcdStage = new Stage(); // Create a NEW Stage
-                    kcdStage.setTitle("KCD Database Manager"); // Set title explicitly
-                    kcdStage.initModality(Modality.NONE); // Adjust modality as needed (e.g., Modality.APPLICATION_MODAL)
-                    // kcdStage.initOwner(app.getPrimaryStage()); // Uncomment if you want it owned by your main application stage
-
-                    kcdDatabaseManager.start(kcdStage); // Start the manager with the new stage
-                    kcdStage.show();
-
-                    // Optional: Handle OS close button (the 'X') to clear references
-                    kcdStage.setOnCloseRequest(event -> {
-                        // Perform any cleanup for the manager if necessary before clearing references
-                        kcdDatabaseManager = null; // Clear the reference to allow garbage collection
-                        kcdStage = null; // Clear the stage reference
-                    });
-
-                } else {
-                    // If the manager exists and its stage is still alive (open or hidden),
-                    // ensure it's visible and bring it to the front.
-                    kcdStage.show(); // Ensure it's visible (e.g., if it was hidden via OS button minimize)
-                    kcdStage.toFront(); // Bring to front if already open
-                }
-            } catch (Exception ex) {
-                System.err.println("Failed to launch KCD-9 application:");
-                ex.printStackTrace();
-            }
+            openKcd9Manager();
         });
         return b;
+    }
+
+    /**
+     * Opens or focuses the shared KCD-9 Database Manager window.
+     */
+    public void openKcd9Manager() {
+        try {
+            if (kcdDatabaseManager == null || kcdStage == null || !kcdStage.isShowing()) {
+                kcdDatabaseManager = new KCDDatabaseManagerJavaFX();
+                kcdStage = new Stage();
+                kcdStage.setTitle("KCD Database Manager");
+                kcdStage.initModality(Modality.NONE);
+                // kcdStage.initOwner(app.getPrimaryStage()); // Uncomment if you want it owned by your main application stage
+
+                kcdDatabaseManager.start(kcdStage);
+                kcdStage.show();
+
+                kcdStage.setOnCloseRequest(event -> {
+                    kcdDatabaseManager = null;
+                    kcdStage = null;
+                });
+            } else {
+                kcdStage.show();
+                kcdStage.toFront();
+            }
+        } catch (Exception ex) {
+            System.err.println("Failed to launch KCD-9 application:");
+            ex.printStackTrace();
+        }
     }
 
     private Button createGlp1Button(String title) {

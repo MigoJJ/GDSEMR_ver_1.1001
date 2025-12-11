@@ -137,6 +137,13 @@ public class IAMTextArea {
     }
 
     /**
+     * Allows consumers to override the Assessment (A>) double-click behavior.
+     */
+    public void setAssessmentDoubleClickHandler(TextAreaDoubleClickHandler handler) {
+        doubleClickHandlers.put(7, Objects.requireNonNull(handler, "handler"));
+    }
+
+    /**
      * Creates and configures the 10 main text areas.
      */
     private void initializeTextAreas() {

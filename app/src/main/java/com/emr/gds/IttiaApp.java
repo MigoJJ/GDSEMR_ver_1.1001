@@ -249,6 +249,7 @@ public class IttiaApp extends Application {
         problemAction = new IAMProblemAction(this);
         textAreaManager = new IAMTextArea(abbrevMap, problemAction);
         buttonAction = new IAMButtonAction(this, dbConn, abbrevMap);
+        textAreaManager.setAssessmentDoubleClickHandler((textArea, index) -> buttonAction.openKcd9Manager());
         functionKeyHandler = new IAMFunctionkey(this);
     }
 

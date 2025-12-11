@@ -45,14 +45,29 @@ public class ClinicalLabDatabase {
 
     public List<ClinicalLabItem> searchItems(String query) {
         List<ClinicalLabItem> items = new ArrayList<>();
-        String sql = "SELECT * FROM clinical_lab_items WHERE test_name LIKE ? OR category LIKE ?";
+        String sql = """
+            SELECT *
+            FROM clinical_lab_items
+            WHERE COALESCE(LOWER(test_name), '') LIKE ?
+               OR COALESCE(LOWER(category), '') LIKE ?
+               OR COALESCE(LOWER(unit), '') LIKE ?
+               OR COALESCE(LOWER(male_reference_range), '') LIKE ?
+               OR COALESCE(LOWER(female_reference_range), '') LIKE ?
+               OR COALESCE(LOWER(codes), '') LIKE ?
+               OR COALESCE(LOWER(comments), '') LIKE ?
+               OR COALESCE(CAST(male_range_low AS TEXT), '') LIKE ?
+               OR COALESCE(CAST(male_range_high AS TEXT), '') LIKE ?
+               OR COALESCE(CAST(female_range_low AS TEXT), '') LIKE ?
+               OR COALESCE(CAST(female_range_high AS TEXT), '') LIKE ?
+            """;
 
         try (Connection conn = DriverManager.getConnection(getDbUrl());
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            String param = "%" + query + "%";
-            pstmt.setString(1, param);
-            pstmt.setString(2, param);
+            String param = "%" + query.toLowerCase() + "%";
+            for (int i = 1; i <= 11; i++) {
+                pstmt.setString(i, param);
+            }
             
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
